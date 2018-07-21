@@ -69,6 +69,7 @@ pub struct Arguments {
     #[structopt(
         short = "q",
         long = "--quiet",
+        conflicts_with = "format",
         help = "Display one character per test instead of one line. Alias to --format=terse",
     )]
     pub quiet: bool,
