@@ -1,0 +1,7 @@
+[package]
+name = "test-cli"
+version = "0.1.0"
+authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
+
+[dependencies]
+structopt = "0.2"
