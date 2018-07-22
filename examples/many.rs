@@ -15,6 +15,7 @@ fn main() {
                 name: format!("test-{:03}", i),
                 kind: String::new(),
                 is_ignored: i % 23 == 0,
+                is_bench: false,
                 data: i,
             }
         })

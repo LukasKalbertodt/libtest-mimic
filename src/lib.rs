@@ -27,19 +27,35 @@ pub struct Test<D = ()> {
     /// set, ignored tests are executed, too.
     pub is_ignored: bool,
 
+    /// Whether this test is actually a benchmark.
+    pub is_bench: bool,
+
     /// Custom data. This field is not used by this library and can instead be
     /// used to store arbitrary data per test.
     pub data: D,
 }
 
 impl<D: Default> Test<D> {
-    /// Creates a test description with the given name, an empty `kind` and
-    /// default data.
-    pub fn from_name(name: impl Into<String>) -> Self {
+    /// Creates a test with the given name, an empty `kind` and default data.
+    /// The test is not ignored and is not a benchmark.
+    pub fn test(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             kind: String::new(),
             is_ignored: false,
+            is_bench: false,
+            data: D::default(),
+        }
+    }
+
+    /// Creates a benchmark with the given name, an empty `kind` and default
+    /// data. The benchmark is not ignored.
+    pub fn bench(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            kind: String::new(),
+            is_ignored: false,
+            is_bench: true,
             data: D::default(),
         }
     }
@@ -51,6 +67,10 @@ pub enum Outcome {
     Passed,
     Failed,
     Ignored,
+    Measured {
+        avg: u64,
+        variance: u64,
+    }
 }
 
 #[must_use]
@@ -60,6 +80,7 @@ pub struct Conclusion {
     num_passed: u64,
     num_failed: u64,
     num_ignored: u64,
+    num_benches: u64,
 }
 
 impl Conclusion {
@@ -101,6 +122,11 @@ impl Conclusion {
     /// Returns how many tests were ignored.
     pub fn num_ignored(&self) -> u64 {
         self.num_ignored
+    }
+
+    /// Returns how many benchmark were successfully run.
+    pub fn num_benches(&self) -> u64 {
+        self.num_benches
     }
 }
 
@@ -184,7 +210,12 @@ pub fn run_tests<D>(
     // Execute all tests
     let mut num_failed = 0;
     let mut num_ignored = 0;
+    let mut num_benches = 0;
     for test in &tests {
+        if test.is_bench {
+            num_benches += 1;
+        }
+
         printer.print_test(&test.name, &test.kind);
 
         let outcome = if test.is_ignored && !args.ignored {
@@ -204,19 +235,13 @@ pub fn run_tests<D>(
     }
 
     // Handle overall results
-    let overall_outcome = if num_failed > 0 {
-        Outcome::Failed
-    } else {
-        Outcome::Passed
-    };
-
-
     let conclusion = Conclusion {
-        has_failed: overall_outcome == Outcome::Failed,
+        has_failed: num_failed != 0,
         num_filtered_out,
-        num_passed: tests.len() as u64 - num_failed,
+        num_passed: tests.len() as u64 - num_failed - num_ignored - num_benches,
         num_failed,
         num_ignored,
+        num_benches,
     };
 
     printer.print_summary(&conclusion);

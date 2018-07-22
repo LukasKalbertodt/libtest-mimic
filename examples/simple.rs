@@ -8,21 +8,23 @@ fn main() {
     let args = Arguments::from_args();
 
     let tests = vec![
-        Test::from_name("toph"),
-        Test::from_name("sokka"),
+        Test::test("toph"),
+        Test::test("sokka"),
         Test {
             name: "long_computation".into(),
             kind: "".into(),
             is_ignored: true,
+            is_bench: false,
             data: (),
         },
         Test {
             name: "lifetime".into(),
             kind: "compile-fail".into(),
             is_ignored: false,
+            is_bench: false,
             data: (),
         },
-        Test::from_name("katara"),
+        Test::test("katara"),
     ];
 
     run_tests(&args, tests, |test| {

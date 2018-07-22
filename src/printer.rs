@@ -129,6 +129,13 @@ impl Printer {
                     Outcome::Failed => 'F',
                     Outcome::Passed => '.',
                     Outcome::Ignored => 'i',
+                    Outcome::Measured { .. } => {
+                        // Benchmark are never printed in terse mode... for
+                        // some reason.
+                        self.print_outcome_pretty(outcome);
+                        writeln!(self.out).unwrap();
+                        return;
+                    }
                 };
 
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -160,8 +167,8 @@ impl Printer {
                     ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
                     conclusion.num_passed(),
                     conclusion.num_failed(),
-                    conclusion.num_ignored,
-                    -1, // TODO
+                    conclusion.num_ignored(),
+                    conclusion.num_benches(),
                     conclusion.num_filtered_out(),
                 ).unwrap();
                 writeln!(self.out).unwrap();
@@ -174,12 +181,17 @@ impl Printer {
         let s = match outcome {
             Outcome::Passed => "ok",
             Outcome::Failed => "FAILED",
-            Outcome::Ignored=> "ignored",
+            Outcome::Ignored => "ignored",
+            Outcome::Measured { .. } => "bench",
         };
 
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
         write!(self.out, "{}", s).unwrap();
         self.out.reset().unwrap();
+
+        if let Outcome::Measured { avg, variance } = outcome {
+            write!(self.out, ": {:>11} ns/iter (+/- {})", avg, variance).unwrap();
+        }
     }
 }
 
@@ -189,6 +201,7 @@ fn color_of_outcome(outcome: Outcome) -> ColorSpec {
         Outcome::Passed => Color::Green,
         Outcome::Failed => Color::Red,
         Outcome::Ignored => Color::Yellow,
+        Outcome::Measured { .. } => Color::Cyan,
     };
     out.set_fg(Some(color));
     out
