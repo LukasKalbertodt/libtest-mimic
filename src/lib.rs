@@ -165,7 +165,6 @@ pub fn run_tests<D>(
     // TODO:
     // - print failures
     // - JSON
-    // - decide how to deal with `--test` and `--bench` flags
     // - multiple threads
 
     // Apply filtering
@@ -229,7 +228,11 @@ pub fn run_tests<D>(
 
         printer.print_test(&test.name, &test.kind);
 
-        let outcome = if test.is_ignored && !args.ignored {
+        let is_ignored = (test.is_ignored && !args.ignored)
+            || (test.is_bench && args.test)
+            || (!test.is_bench && args.bench);
+
+        let outcome = if is_ignored {
             Outcome::Ignored
         } else {
             // Run the given function

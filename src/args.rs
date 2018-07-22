@@ -31,7 +31,11 @@ pub struct Arguments {
     pub ignored: bool,
 
     /// Run tests, but not benchmarks.
-    #[structopt(long = "--test", help = "Run tests and not benchmarks")]
+    #[structopt(
+        long = "--test",
+        conflicts_with = "bench",
+        help = "Run tests and not benchmarks",
+    )]
     pub test: bool,
 
     /// Run benchmarks, but not tests.
