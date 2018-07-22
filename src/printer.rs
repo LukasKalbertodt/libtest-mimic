@@ -177,6 +177,25 @@ impl Printer {
         }
     }
 
+    /// Prints a list of all tests. Used if `--list` is set.
+    pub(crate) fn print_list<D>(&mut self, tests: &[Test<D>]) {
+        for test in tests {
+            let kind = if test.kind.is_empty() {
+                format!("")
+            } else {
+                format!("[{}] ", test.kind)
+            };
+
+            writeln!(
+                self.out,
+                "{}{}: {}",
+                kind,
+                test.name,
+                if test.is_bench { "bench" } else { "test" },
+            ).unwrap();
+        }
+    }
+
     fn print_outcome_pretty(&mut self, outcome: Outcome) {
         let s = match outcome {
             Outcome::Passed => "ok",

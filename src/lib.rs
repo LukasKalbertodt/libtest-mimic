@@ -166,7 +166,6 @@ pub fn run_tests<D>(
     // - print failures
     // - JSON
     // - decide how to deal with `--test` and `--bench` flags
-    // - `--list` flag
     // - multiple threads
 
     // Apply filtering
@@ -203,6 +202,18 @@ pub fn run_tests<D>(
 
     // Create printer which is used for all output.
     let mut printer = printer::Printer::new(args, &tests);
+
+    if args.list {
+        printer.print_list(&tests);
+        return Conclusion {
+            has_failed: false,
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_benches: 0,
+        };
+    }
 
     // Print number of tests
     printer.print_title(tests.len() as u64);
