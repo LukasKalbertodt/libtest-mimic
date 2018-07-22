@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate structopt;
+extern crate termcolor;
 
 use std::{
     fmt,
     process,
     str::FromStr,
 };
+
+mod printer;
 
 /// Command line arguments.
 ///
@@ -240,33 +243,32 @@ impl fmt::Display for TestOutcome {
 /// This function exits the application with an appropriate error code and
 /// never returns!
 ///
-/// Currently, CLI args are completely ignored!
+/// Currently, the following CLI args are properly understood:
+/// - `color`
+/// - `format`
+/// - `logfile`
+///
+/// The others are ignored.
 pub fn run_tests<D>(
-    _args: &Arguments,
+    args: &Arguments,
     tests: &[Test<D>],
     mut run_test: impl FnMut(&Test<D>) -> TestOutcome,
 ) -> ! {
+    let mut printer = printer::Printer::new(args);
+
     // Print number of tests
-    let plural_s = if tests.len() == 1 { "" } else { "s" };
-    println!();
-    println!("running {} test{}", tests.len(), plural_s);
+    printer.print_title(tests.len() as u64);
 
     // Execute all tests
     let mut failed_count = 0;
     for test in tests {
-        // Print test decription
-        let kind_str = if test.kind.is_empty() {
-            format!("")
-        } else {
-            format!("[{}] ", test.kind)
-        };
-        print!("test {}{} ... ", kind_str, test.name);
+        printer.print_test(&test.name, &test.kind);
 
         // Run the given function to run the test.
         let outcome = run_test(&test);
 
         // Handle outcome
-        println!("{}", outcome);
+        printer.print_single_outcome(outcome);
         match outcome {
             TestOutcome::Passed => {}
             TestOutcome::Failed => {
@@ -275,20 +277,14 @@ pub fn run_tests<D>(
         }
     }
 
-    // Print summary
+    // Handle overall results
     let overall_outcome = if failed_count > 0 {
         TestOutcome::Failed
     } else {
         TestOutcome::Passed
     };
-    println!();
-    println!(
-        "test result: {}. {} passed; {} failed",
-        overall_outcome,
-        tests.len() - failed_count,
-        failed_count,
-    );
-    println!();
+
+    printer.print_summary(overall_outcome, tests.len() as u64 - failed_count, failed_count);
 
     // Exit application
     if overall_outcome == TestOutcome::Passed {

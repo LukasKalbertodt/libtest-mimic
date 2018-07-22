@@ -5,3 +5,4 @@ authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 
 [dependencies]
 structopt = "0.2"
+termcolor = "0.3"
