@@ -29,7 +29,7 @@ fn main() {
 
     run_tests(&args, tests, |test| {
         if test.name == "sokka" {
-            Outcome::Failed
+            Outcome::Failed { msg: Some("Sokka tripped and fell :(".into()) }
         } else {
             Outcome::Passed
         }

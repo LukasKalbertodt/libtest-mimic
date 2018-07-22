@@ -118,7 +118,7 @@ impl Printer {
 
     /// Prints the outcome of a single tests. `ok` or `FAILED` in pretty mode
     /// and `.` or `F` in terse mode.
-    pub(crate) fn print_single_outcome(&mut self, outcome: Outcome) {
+    pub(crate) fn print_single_outcome(&mut self, outcome: &Outcome) {
         match self.format {
             FormatSetting::Pretty => {
                 self.print_outcome_pretty(outcome);
@@ -126,8 +126,8 @@ impl Printer {
             }
             FormatSetting::Terse => {
                 let c = match outcome {
-                    Outcome::Failed => 'F',
                     Outcome::Passed => '.',
+                    Outcome::Failed { .. } => 'F',
                     Outcome::Ignored => 'i',
                     Outcome::Measured { .. } => {
                         // Benchmark are never printed in terse mode... for
@@ -154,14 +154,14 @@ impl Printer {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
                 let outcome = if conclusion.has_failed() {
-                    Outcome::Failed
+                    Outcome::Failed { msg: None }
                 } else {
                     Outcome::Passed
                 };
 
                 writeln!(self.out).unwrap();
                 write!(self.out, "test result: ").unwrap();
-                self.print_outcome_pretty(outcome);
+                self.print_outcome_pretty(&outcome);
                 writeln!(
                     self.out,
                     ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
@@ -196,10 +196,32 @@ impl Printer {
         }
     }
 
-    fn print_outcome_pretty(&mut self, outcome: Outcome) {
+    pub(crate) fn print_failures<D>(&mut self, fails: &[(&Test<D>, Option<String>)]) {
+        writeln!(self.out).unwrap();
+        writeln!(self.out, "failures:").unwrap();
+        writeln!(self.out).unwrap();
+
+        // Print messages of all tests
+        for (test, msg) in fails {
+            writeln!(self.out, "---- {} ----", test.name).unwrap();
+            if let Some(msg) = msg {
+                writeln!(self.out, "{}", msg).unwrap();
+            }
+            writeln!(self.out).unwrap();
+        }
+
+        // Print summary list of failed tests
+        writeln!(self.out).unwrap();
+        writeln!(self.out, "failures:").unwrap();
+        for (test, _) in fails {
+            writeln!(self.out, "    {}", test.name).unwrap();
+        }
+    }
+
+    fn print_outcome_pretty(&mut self, outcome: &Outcome) {
         let s = match outcome {
             Outcome::Passed => "ok",
-            Outcome::Failed => "FAILED",
+            Outcome::Failed { .. } => "FAILED",
             Outcome::Ignored => "ignored",
             Outcome::Measured { .. } => "bench",
         };
@@ -214,11 +236,11 @@ impl Printer {
     }
 }
 
-fn color_of_outcome(outcome: Outcome) -> ColorSpec {
+fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
     let mut out = ColorSpec::new();
     let color = match outcome {
         Outcome::Passed => Color::Green,
-        Outcome::Failed => Color::Red,
+        Outcome::Failed { .. } => Color::Red,
         Outcome::Ignored => Color::Yellow,
         Outcome::Measured { .. } => Color::Cyan,
     };

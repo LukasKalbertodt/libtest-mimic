@@ -62,10 +62,13 @@ impl<D: Default> Test<D> {
 }
 
 /// The outcome of performing a test.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
     Passed,
-    Failed,
+    Failed {
+        /// A message that is shown after all tests have been run.
+        msg: Option<String>,
+    },
     Ignored,
     Measured {
         avg: u64,
@@ -161,7 +164,6 @@ pub fn run_tests<D>(
     run_test: impl Fn(&Test<D>) -> Outcome,
 ) -> Conclusion {
     // TODO:
-    // - print failures
     // - JSON
     // - multiple threads
 
@@ -216,7 +218,7 @@ pub fn run_tests<D>(
     printer.print_title(tests.len() as u64);
 
     // Execute all tests
-    let mut num_failed = 0;
+    let mut failed_tests = Vec::new();
     let mut num_ignored = 0;
     let mut num_benches = 0;
     for test in &tests {
@@ -238,15 +240,21 @@ pub fn run_tests<D>(
         };
 
         // Handle outcome
-        printer.print_single_outcome(outcome);
+        printer.print_single_outcome(&outcome);
         match outcome {
-            Outcome::Failed => num_failed += 1,
+            Outcome::Failed { msg } => failed_tests.push((test, msg)),
             Outcome::Ignored => num_ignored += 1,
             _ => {}
         }
     }
 
+    // Print failures if there were any
+    if !failed_tests.is_empty() {
+        printer.print_failures(&failed_tests);
+    }
+
     // Handle overall results
+    let num_failed = failed_tests.len() as u64;
     let conclusion = Conclusion {
         has_failed: num_failed != 0,
         num_filtered_out,
