@@ -2,7 +2,7 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use ::{Arguments, ColorSetting, FormatSetting, TestOutcome};
+use ::{Arguments, ColorSetting, Conclusion, FormatSetting, TestOutcome};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,
@@ -104,20 +104,27 @@ impl Printer {
     /// Prints the summary line after all tests have been executed.
     pub(crate) fn print_summary(
         &mut self,
-        overall_outcome: TestOutcome,
-        passed_count: u64,
-        failed_count: u64,
+        conclusion: &Conclusion,
     ) {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
+                let outcome = if conclusion.has_failed() {
+                    TestOutcome::Failed
+                } else {
+                    TestOutcome::Passed
+                };
+
                 writeln!(self.out).unwrap();
                 write!(self.out, "test result: ").unwrap();
-                self.print_outcome_pretty(overall_outcome);
+                self.print_outcome_pretty(outcome);
                 writeln!(
                     self.out,
-                    ". {} passed; {} failed",
-                    passed_count,
-                    failed_count,
+                    ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
+                    conclusion.num_passed(),
+                    conclusion.num_failed(),
+                    -1, // TODO
+                    -1, // TODO
+                    conclusion.num_filtered_out(),
                 ).unwrap();
                 writeln!(self.out).unwrap();
             }

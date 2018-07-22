@@ -50,6 +50,9 @@ pub enum TestOutcome {
 #[must_use]
 pub struct Conclusion {
     has_failed: bool,
+    num_filtered_out: u64,
+    num_passed: u64,
+    num_failed: u64,
 }
 
 impl Conclusion {
@@ -70,6 +73,22 @@ impl Conclusion {
     /// Returns whether or not there have been any failures.
     pub fn has_failed(&self) -> bool {
         self.has_failed
+    }
+
+    /// Returns how many tests were filtered out (either by the filter-in
+    /// pattern or by `--skip` arguments).
+    pub fn num_filtered_out(&self) -> u64 {
+        self.num_filtered_out
+    }
+
+    /// Returns how many tests passed.
+    pub fn num_passed(&self) -> u64 {
+        self.num_passed
+    }
+
+    /// Returns how many tests failed.
+    pub fn num_failed(&self) -> u64 {
+        self.num_failed
     }
 }
 
@@ -102,12 +121,11 @@ impl Conclusion {
 /// The others are ignored for now.
 pub fn run_tests<D>(
     args: &Arguments,
-    tests: &[Test<D>],
+    tests: Vec<Test<D>>,
     run_test: impl Fn(&Test<D>) -> TestOutcome,
 ) -> Conclusion {
     // TODO:
     // - ignored tests
-    // - test filtering (normal filter-in and filter-out) (with `--exact` flag)
     // - print failures
     // - JSON
     // - `--ignored` flag
@@ -118,12 +136,45 @@ pub fn run_tests<D>(
 
     let mut printer = printer::Printer::new(args);
 
+    // Apply filtering
+    let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
+        let len_before = tests.len() as u64;
+        let mut tests = tests;
+        tests.retain(|t| {
+            // If a filter was specified, apply this
+            if let Some(filter) = &args.filter_string {
+                match args.exact {
+                    true if &t.name != filter => return false,
+                    false if !t.name.contains(filter) => return false,
+                    _ => {}
+                };
+            }
+
+            // If any skip pattern were specified, test for all patterns.
+            for skip_filter in &args.skip {
+                match args.exact {
+                    true if &t.name == skip_filter => return false,
+                    false if t.name.contains(skip_filter) => return false,
+                    _ => {}
+                }
+            }
+
+            true
+        });
+
+        let num_filtered_out = len_before - tests.len() as u64;
+        (tests, num_filtered_out)
+    } else {
+        (tests, 0)
+    };
+
     // Print number of tests
     printer.print_title(tests.len() as u64);
 
     // Execute all tests
-    let mut failed_count = 0;
-    for test in tests {
+    let mut num_failed = 0;
+    for test in &tests {
+
         printer.print_test(&test.name, &test.kind);
 
         // Run the given function to run the test.
@@ -134,21 +185,27 @@ pub fn run_tests<D>(
         match outcome {
             TestOutcome::Passed => {}
             TestOutcome::Failed => {
-                failed_count += 1;
+                num_failed += 1;
             }
         }
     }
 
     // Handle overall results
-    let overall_outcome = if failed_count > 0 {
+    let overall_outcome = if num_failed > 0 {
         TestOutcome::Failed
     } else {
         TestOutcome::Passed
     };
 
-    printer.print_summary(overall_outcome, tests.len() as u64 - failed_count, failed_count);
 
-    Conclusion {
+    let conclusion = Conclusion {
         has_failed: overall_outcome == TestOutcome::Failed,
-    }
+        num_filtered_out,
+        num_passed: tests.len() as u64 - num_failed,
+        num_failed,
+    };
+
+    printer.print_summary(&conclusion);
+
+    conclusion
 }

@@ -20,7 +20,7 @@ fn main() {
         .collect::<Vec<_>>();
 
     // Run tests
-    run_tests(&args, &tests, |test| {
+    run_tests(&args, tests, |test| {
         // We want this one test to fail
         if test.data == 53 {
             TestOutcome::Failed
