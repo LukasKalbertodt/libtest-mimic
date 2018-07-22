@@ -1,5 +1,5 @@
-test-cli
-========
+libtest-mimic
+=============
 
 Write your own test harness that looks and behaves like the built-in harness! **WIP**, even the name will probably change.
 
