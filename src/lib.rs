@@ -89,6 +89,18 @@ pub fn run_tests<D>(
     tests: &[Test<D>],
     run_test: impl Fn(&Test<D>) -> TestOutcome,
 ) -> Conclusion {
+    // TODO:
+    // - ignored tests
+    // - test filtering (normal filter-in and filter-out) (with `--exact` flag)
+    // - capture stdout/stderr (with `--nocapture` flag)
+    // - print failures
+    // - JSON
+    // - `--ignored` flag
+    // - decide how to deal with `--test` and `--bench` flags
+    // - `--list` flag
+    // - multiple threads
+    // - Better formatting by determining max test name len
+
     let mut printer = printer::Printer::new(args);
 
     // Print number of tests
