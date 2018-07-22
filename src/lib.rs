@@ -47,6 +47,28 @@ pub enum TestOutcome {
     Failed,
 }
 
+#[must_use]
+pub struct Conclusion {
+    has_failed: bool,
+}
+
+impl Conclusion {
+    pub fn exit(&self) -> ! {
+        self.exit_if_failed();
+        process::exit(0);
+    }
+
+    pub fn exit_if_failed(&self) {
+        if self.has_failed {
+            process::exit(101)
+        }
+    }
+
+    pub fn has_failed(&self) -> bool {
+        self.has_failed
+    }
+}
+
 /// Runs all given tests with the given test runner.
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -59,13 +81,14 @@ pub enum TestOutcome {
 /// - `color`
 /// - `format`
 /// - `logfile`
+/// - `quiet`
 ///
 /// The others are ignored.
 pub fn run_tests<D>(
     args: &Arguments,
     tests: &[Test<D>],
     run_test: impl Fn(&Test<D>) -> TestOutcome,
-) -> ! {
+) -> Conclusion {
     let mut printer = printer::Printer::new(args);
 
     // Print number of tests
@@ -98,10 +121,7 @@ pub fn run_tests<D>(
 
     printer.print_summary(overall_outcome, tests.len() as u64 - failed_count, failed_count);
 
-    // Exit application
-    if overall_outcome == TestOutcome::Passed {
-        process::exit(0)
-    } else {
-        process::exit(1)
+    Conclusion {
+        has_failed: overall_outcome == TestOutcome::Failed,
     }
 }

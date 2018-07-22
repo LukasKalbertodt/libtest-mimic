@@ -27,5 +27,5 @@ fn main() {
         } else {
             TestOutcome::Passed
         }
-    });
+    }).exit();
 }
