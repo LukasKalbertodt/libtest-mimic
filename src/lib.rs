@@ -28,6 +28,18 @@ pub struct Test<D = ()> {
     pub data: D,
 }
 
+impl<D: Default> Test<D> {
+    /// Creates a test description with the given name, an empty `kind` and
+    /// default data.
+    pub fn from_name(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            kind: String::new(),
+            data: D::default(),
+        }
+    }
+}
+
 /// The outcome of performing a test.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TestOutcome {
