@@ -42,7 +42,7 @@ impl<D: Default> Test<D> {
 
 /// The outcome of performing a test.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TestOutcome {
+pub enum Outcome {
     Passed,
     Failed,
 }
@@ -122,7 +122,7 @@ impl Conclusion {
 pub fn run_tests<D>(
     args: &Arguments,
     tests: Vec<Test<D>>,
-    run_test: impl Fn(&Test<D>) -> TestOutcome,
+    run_test: impl Fn(&Test<D>) -> Outcome,
 ) -> Conclusion {
     // TODO:
     // - ignored tests
@@ -183,8 +183,8 @@ pub fn run_tests<D>(
         // Handle outcome
         printer.print_single_outcome(outcome);
         match outcome {
-            TestOutcome::Passed => {}
-            TestOutcome::Failed => {
+            Outcome::Passed => {}
+            Outcome::Failed => {
                 num_failed += 1;
             }
         }
@@ -192,14 +192,14 @@ pub fn run_tests<D>(
 
     // Handle overall results
     let overall_outcome = if num_failed > 0 {
-        TestOutcome::Failed
+        Outcome::Failed
     } else {
-        TestOutcome::Passed
+        Outcome::Passed
     };
 
 
     let conclusion = Conclusion {
-        has_failed: overall_outcome == TestOutcome::Failed,
+        has_failed: overall_outcome == Outcome::Failed,
         num_filtered_out,
         num_passed: tests.len() as u64 - num_failed,
         num_failed,

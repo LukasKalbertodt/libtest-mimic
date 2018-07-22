@@ -2,7 +2,7 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use ::{Arguments, ColorSetting, Conclusion, FormatSetting, TestOutcome};
+use ::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,
@@ -85,7 +85,7 @@ impl Printer {
 
     /// Prints the outcome of a single tests. `ok` or `FAILED` in pretty mode
     /// and `.` or `F` in terse mode.
-    pub(crate) fn print_single_outcome(&mut self, outcome: TestOutcome) {
+    pub(crate) fn print_single_outcome(&mut self, outcome: Outcome) {
         match self.format {
             FormatSetting::Pretty => {
                 self.print_outcome_pretty(outcome);
@@ -93,7 +93,7 @@ impl Printer {
             }
             FormatSetting::Terse => {
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
-                let c = if outcome == TestOutcome::Failed { 'F' } else { '.' };
+                let c = if outcome == Outcome::Failed { 'F' } else { '.' };
                 write!(self.out, "{}", c).unwrap();
                 self.out.reset().unwrap();
             }
@@ -109,9 +109,9 @@ impl Printer {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
                 let outcome = if conclusion.has_failed() {
-                    TestOutcome::Failed
+                    Outcome::Failed
                 } else {
-                    TestOutcome::Passed
+                    Outcome::Passed
                 };
 
                 writeln!(self.out).unwrap();
@@ -132,10 +132,10 @@ impl Printer {
         }
     }
 
-    fn print_outcome_pretty(&mut self, outcome: TestOutcome) {
+    fn print_outcome_pretty(&mut self, outcome: Outcome) {
         let s = match outcome {
-            TestOutcome::Passed => "ok",
-            TestOutcome::Failed => "FAILED",
+            Outcome::Passed => "ok",
+            Outcome::Failed => "FAILED",
         };
 
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -144,11 +144,11 @@ impl Printer {
     }
 }
 
-fn color_of_outcome(outcome: TestOutcome) -> ColorSpec {
+fn color_of_outcome(outcome: Outcome) -> ColorSpec {
     let mut out = ColorSpec::new();
     let color = match outcome {
-        TestOutcome::Passed => Color::Green,
-        TestOutcome::Failed => Color::Red,
+        Outcome::Passed => Color::Green,
+        Outcome::Failed => Color::Red,
     };
     out.set_fg(Some(color));
     out
