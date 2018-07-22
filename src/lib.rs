@@ -3,6 +3,7 @@ extern crate structopt;
 
 use std::{
     fmt,
+    process,
     str::FromStr,
 };
 
@@ -174,6 +175,7 @@ impl FromStr for ColorSetting {
     }
 }
 
+/// Possible values for the `--format` option.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FormatSetting {
     /// One line per test. Output for humans. (default)
@@ -195,5 +197,103 @@ impl FromStr for FormatSetting {
             "json" => Ok(FormatSetting::Json),
             _ => Err("foo"),
         }
+    }
+}
+
+/// Description of a single test.
+pub struct Test<D = ()> {
+    /// The name of the test. It's displayed in the output and used for all
+    /// kinds of filtering.
+    pub name: String,
+
+    /// Optional string to describe the kind of test. If this string is not
+    /// empty, it is printed in brackets before the test name (e.g.
+    /// `test [my-kind] test_name`).
+    pub kind: String,
+
+    /// Custom data. This field is not used by this library and can instead be
+    /// used to store more data per test.
+    pub data: D,
+}
+
+/// The outcome of performing a test.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TestOutcome {
+    Passed,
+    Failed,
+}
+
+impl fmt::Display for TestOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TestOutcome::Passed => "ok",
+            TestOutcome::Failed => "FAILED",
+        }.fmt(f)
+    }
+}
+
+/// Runs all given tests with the given test runner.
+///
+/// This is the central function of this crate. It provides the framework for
+/// the testing harness. It does all the printing and house keeping.
+///
+/// This function exits the application with an appropriate error code and
+/// never returns!
+///
+/// Currently, CLI args are completely ignored!
+pub fn run_tests<D>(
+    _args: &Arguments,
+    tests: &[Test<D>],
+    mut run_test: impl FnMut(&Test<D>) -> TestOutcome,
+) -> ! {
+    // Print number of tests
+    let plural_s = if tests.len() == 1 { "" } else { "s" };
+    println!();
+    println!("running {} test{}", tests.len(), plural_s);
+
+    // Execute all tests
+    let mut failed_count = 0;
+    for test in tests {
+        // Print test decription
+        let kind_str = if test.kind.is_empty() {
+            format!("")
+        } else {
+            format!("[{}] ", test.kind)
+        };
+        print!("test {}{} ... ", kind_str, test.name);
+
+        // Run the given function to run the test.
+        let outcome = run_test(&test);
+
+        // Handle outcome
+        println!("{}", outcome);
+        match outcome {
+            TestOutcome::Passed => {}
+            TestOutcome::Failed => {
+                failed_count += 1;
+            }
+        }
+    }
+
+    // Print summary
+    let overall_outcome = if failed_count > 0 {
+        TestOutcome::Failed
+    } else {
+        TestOutcome::Passed
+    };
+    println!();
+    println!(
+        "test result: {}. {} passed; {} failed",
+        overall_outcome,
+        tests.len() - failed_count,
+        failed_count,
+    );
+    println!();
+
+    // Exit application
+    if overall_outcome == TestOutcome::Passed {
+        process::exit(0)
+    } else {
+        process::exit(1)
     }
 }
