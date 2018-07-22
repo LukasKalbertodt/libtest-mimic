@@ -62,7 +62,7 @@ impl fmt::Display for TestOutcome {
 pub fn run_tests<D>(
     args: &Arguments,
     tests: &[Test<D>],
-    mut run_test: impl FnMut(&Test<D>) -> TestOutcome,
+    run_test: impl Fn(&Test<D>) -> TestOutcome,
 ) -> ! {
     let mut printer = printer::Printer::new(args);
 
