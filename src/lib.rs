@@ -137,16 +137,11 @@ pub fn run_tests<D>(
     run_test: impl Fn(&Test<D>) -> Outcome,
 ) -> Conclusion {
     // TODO:
-    // - ignored tests
     // - print failures
     // - JSON
-    // - `--ignored` flag
     // - decide how to deal with `--test` and `--bench` flags
     // - `--list` flag
     // - multiple threads
-    // - Better formatting by determining max test name len
-
-    let mut printer = printer::Printer::new(args);
 
     // Apply filtering
     let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
@@ -179,6 +174,9 @@ pub fn run_tests<D>(
     } else {
         (tests, 0)
     };
+
+    // Create printer which is used for all output.
+    let mut printer = printer::Printer::new(args, &tests);
 
     // Print number of tests
     printer.print_title(tests.len() as u64);

@@ -2,17 +2,19 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use ::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome};
+use ::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,
     format: FormatSetting,
+    name_width: usize,
+    kind_width: usize,
 }
 
 impl Printer {
     /// Creates a new printer configured by the given arguments (`format`,
     /// `color` and `logfile` options).
-    pub(crate) fn new(args: &Arguments) -> Self {
+    pub(crate) fn new<D>(args: &Arguments, tests: &[Test<D>]) -> Self {
         let color_arg = args.color.unwrap_or(ColorSetting::Auto);
 
         // Determine target of all output
@@ -39,9 +41,33 @@ impl Printer {
             args.format.unwrap_or(FormatSetting::Pretty)
         };
 
+        // Determine max test name length to do nice formatting later.
+        //
+        // Unicode is hard and there is no way we can properly align/pad the
+        // test names and outcomes. Counting the number of code points is just
+        // a cheap way that works in most cases.
+        let name_width = tests.iter()
+            .map(|test| test.name.chars().count())
+            .max()
+            .unwrap_or(0);
+
+        let kind_width = tests.iter()
+            .map(|test| {
+                if test.kind.is_empty() {
+                    0
+                } else {
+                    // The two braces [] and one space
+                    test.kind.chars().count() + 3
+                }
+            })
+            .max()
+            .unwrap_or(0);
+
         Self {
             out,
             format,
+            name_width,
+            kind_width,
         }
     }
 
@@ -67,13 +93,20 @@ impl Printer {
     pub(crate) fn print_test(&mut self, name: &str, kind: &str) {
         match self.format {
             FormatSetting::Pretty => {
-                let kind_str = if kind.is_empty() {
+                let kind = if kind.is_empty() {
                     format!("")
                 } else {
                     format!("[{}] ", kind)
                 };
 
-                write!(self.out, "test {}{} ... ", kind_str, name).unwrap();
+                write!(
+                    self.out,
+                    "test {: <2$}{: <3$} ... ",
+                    kind,
+                    name,
+                    self.kind_width,
+                    self.name_width,
+                ).unwrap();
             }
             FormatSetting::Terse => {
                 // In terse mode, nothing is printed before the job. Only
