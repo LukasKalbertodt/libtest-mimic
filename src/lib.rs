@@ -150,13 +150,11 @@ impl Conclusion {
 ///   If however, the test is part of the current application and it uses
 ///   `println!()` and friends, it might be impossible to capture the output.
 ///
-/// Currently, the following CLI args are properly understood:
-/// - `color`
-/// - `format`
-/// - `logfile`
-/// - `quiet`
+/// Currently, the following CLI args are ignored, but are planned to be used
+/// in the future:
+/// - `--test-threads`
 ///
-/// The others are ignored for now.
+/// All other flags and options are used properly.
 pub fn run_tests<D>(
     args: &Arguments,
     tests: Vec<Test<D>>,
