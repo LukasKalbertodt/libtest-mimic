@@ -3,7 +3,6 @@ extern crate structopt;
 extern crate termcolor;
 
 use std::{
-    fmt,
     process,
 };
 
@@ -25,24 +24,15 @@ pub struct Test<D = ()> {
     pub kind: String,
 
     /// Custom data. This field is not used by this library and can instead be
-    /// used to store more data per test.
+    /// used to store arbitrary data per test.
     pub data: D,
 }
 
 /// The outcome of performing a test.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TestOutcome {
     Passed,
     Failed,
-}
-
-impl fmt::Display for TestOutcome {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            TestOutcome::Passed => "ok",
-            TestOutcome::Failed => "FAILED",
-        }.fmt(f)
-    }
 }
 
 /// Runs all given tests with the given test runner.

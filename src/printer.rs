@@ -126,8 +126,13 @@ impl Printer {
     }
 
     fn print_outcome_pretty(&mut self, outcome: TestOutcome) {
+        let s = match outcome {
+            TestOutcome::Passed => "ok",
+            TestOutcome::Failed => "FAILED",
+        };
+
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
-        write!(self.out, "{}", outcome).unwrap();
+        write!(self.out, "{}", s).unwrap();
         self.out.reset().unwrap();
     }
 }
