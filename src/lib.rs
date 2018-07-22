@@ -23,6 +23,10 @@ pub struct Test<D = ()> {
     /// `test [my-kind] test_name`).
     pub kind: String,
 
+    /// Whether or not this test should be ignored. If the `--ignored` flag is
+    /// set, ignored tests are executed, too.
+    pub is_ignored: bool,
+
     /// Custom data. This field is not used by this library and can instead be
     /// used to store arbitrary data per test.
     pub data: D,
@@ -35,6 +39,7 @@ impl<D: Default> Test<D> {
         Self {
             name: name.into(),
             kind: String::new(),
+            is_ignored: false,
             data: D::default(),
         }
     }
@@ -45,6 +50,7 @@ impl<D: Default> Test<D> {
 pub enum Outcome {
     Passed,
     Failed,
+    Ignored,
 }
 
 #[must_use]
@@ -53,6 +59,7 @@ pub struct Conclusion {
     num_filtered_out: u64,
     num_passed: u64,
     num_failed: u64,
+    num_ignored: u64,
 }
 
 impl Conclusion {
@@ -89,6 +96,11 @@ impl Conclusion {
     /// Returns how many tests failed.
     pub fn num_failed(&self) -> u64 {
         self.num_failed
+    }
+
+    /// Returns how many tests were ignored.
+    pub fn num_ignored(&self) -> u64 {
+        self.num_ignored
     }
 }
 
@@ -173,20 +185,23 @@ pub fn run_tests<D>(
 
     // Execute all tests
     let mut num_failed = 0;
+    let mut num_ignored = 0;
     for test in &tests {
-
         printer.print_test(&test.name, &test.kind);
 
-        // Run the given function to run the test.
-        let outcome = run_test(&test);
+        let outcome = if test.is_ignored && !args.ignored {
+            Outcome::Ignored
+        } else {
+            // Run the given function
+            run_test(&test)
+        };
 
         // Handle outcome
         printer.print_single_outcome(outcome);
         match outcome {
-            Outcome::Passed => {}
-            Outcome::Failed => {
-                num_failed += 1;
-            }
+            Outcome::Failed => num_failed += 1,
+            Outcome::Ignored => num_ignored += 1,
+            _ => {}
         }
     }
 
@@ -203,6 +218,7 @@ pub fn run_tests<D>(
         num_filtered_out,
         num_passed: tests.len() as u64 - num_failed,
         num_failed,
+        num_ignored,
     };
 
     printer.print_summary(&conclusion);

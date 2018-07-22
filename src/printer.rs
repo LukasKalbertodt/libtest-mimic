@@ -92,8 +92,13 @@ impl Printer {
                 writeln!(self.out).unwrap();
             }
             FormatSetting::Terse => {
+                let c = match outcome {
+                    Outcome::Failed => 'F',
+                    Outcome::Passed => '.',
+                    Outcome::Ignored => 'i',
+                };
+
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
-                let c = if outcome == Outcome::Failed { 'F' } else { '.' };
                 write!(self.out, "{}", c).unwrap();
                 self.out.reset().unwrap();
             }
@@ -122,7 +127,7 @@ impl Printer {
                     ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
                     conclusion.num_passed(),
                     conclusion.num_failed(),
-                    -1, // TODO
+                    conclusion.num_ignored,
                     -1, // TODO
                     conclusion.num_filtered_out(),
                 ).unwrap();
@@ -136,6 +141,7 @@ impl Printer {
         let s = match outcome {
             Outcome::Passed => "ok",
             Outcome::Failed => "FAILED",
+            Outcome::Ignored=> "ignored",
         };
 
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -149,6 +155,7 @@ fn color_of_outcome(outcome: Outcome) -> ColorSpec {
     let color = match outcome {
         Outcome::Passed => Color::Green,
         Outcome::Failed => Color::Red,
+        Outcome::Ignored => Color::Yellow,
     };
     out.set_fg(Some(color));
     out
