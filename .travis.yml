@@ -1,0 +1,18 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+script:
+  - ci/check-basic-style.sh
+  - ci/compile-all.sh
+  - ci/test-all.sh
+
+# speeds up travis build (I guess)
+cache: cargo
