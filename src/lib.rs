@@ -1,3 +1,48 @@
+//! Write your own test scripts that look and behave like built-in tests!
+//!
+//! This is a simple and small testing framework that mimics the original
+//! `libtest` (used by `cargo test`/`rustc --test`). That means: all output
+//! looks pretty much like `cargo test` and most CLI arguments are understood
+//! and used. With that plumbing work out of the way, your test runner can
+//! concentrate on the actual testing.
+//!
+//! The central function of this crate is [`run_tests`].
+//!
+//! # Example
+//!
+//! ```
+//! extern crate libtest_mimic;
+//!
+//! use libtest_mimic::{Arguments, Test, Outcome, run_tests};
+//!
+//!
+//! // Parse command line arguments
+//! let args = Arguments::from_args();
+//!
+//! // Create a list of tests (in this case: three dummy tests)
+//! let tests = vec![
+//!     Test::test("toph"),
+//!     Test::test("sokka"),
+//!     Test {
+//!         name: "long_computation".into(),
+//!         kind: "".into(),
+//!         is_ignored: true,
+//!         is_bench: false,
+//!         data: (),
+//!     },
+//! ];
+//!
+//! // Run all tests and exit the application appropriatly (in this case, the
+//! // test runner is a dummy runner which does nothing and says that all tests
+//! // passed).
+//! run_tests(&args, tests, |test| Outcome::Passed).exit();
+//! ```
+//!
+//! For more examples, see [`examples/` in the repository][repo-examples].
+//!
+//!
+//! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
+
 #[macro_use]
 extern crate structopt;
 extern crate termcolor;
