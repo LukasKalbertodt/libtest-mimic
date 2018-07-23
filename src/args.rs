@@ -5,14 +5,27 @@ use structopt;
 /// Command line arguments.
 ///
 /// This type represents everything the user can specify via CLI args. The main
-/// method is `from_args()` which reads the global `std::env::args()` and
-/// parses them into this type. The CLI is very similar to the one from the
-/// native test harness. There are minor differences, mainly in the help
-/// output.
+/// method is [`from_args`][Arguments::from_args] which reads the global
+/// `std::env::args()` and parses them into this type.
+///
+/// The CLI is very similar to the one from the native test harness. However,
+/// there are minor differences:
+/// - Most notable: the `--help` message is slightly different. This comes from
+///   the fact that this crate (right now) uses structopt (which uses `clap`)
+///   while the original `libtest` uses `docopt`.
+/// - `--skip` only accepts one value per occurence (but can occur multiple
+///   times). This solves ambiguity with the `filter` value at the very end.
+///   Consider "`--skip foo bar`": should this be parsed as `skip: vec!["foo",
+///   "bar"], filter: None` or `skip: vec!["foo"], filter: Some("bar")`? Here,
+///   it's clearly the latter version. If you need multiple values for `skip`,
+///   do it like this: `--skip foo --skip bar`.
+/// - `--bench` and `--test` cannot be both set at the same time. It doesn't
+///   make sense, but it's allowed in `libtest` for some reason.
 ///
 /// **Note**: just because all CLI args can be parsed, doesn't mean that they
-/// are used. Check [`run_tests`] for information on which arguments are used.
-#[derive(StructOpt, Debug)]
+/// are all automatically used. Check [`run_tests`][::run_tests] for information on which
+/// arguments are automatically used and require special care.
+#[derive(StructOpt, Debug, Clone)]
 #[structopt(
     template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
     raw(setting = "structopt::clap::AppSettings::DisableVersion"),
@@ -61,8 +74,8 @@ pub struct Arguments {
     )]
     pub exact: bool,
 
-    // TODO: can only be set if another isnt
     /// If set, display only one character per test instead of one line.
+    /// Especially useful for huge test suites.
     ///
     /// This is an alias for `--format=terse`. If this is set, `format` is
     /// `None`.
@@ -138,7 +151,7 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    /// Parses the CLI arguments given to the application into `Arguments`.
+    /// Parses the global CLI arguments given to the application.
     ///
     /// If the parsing fails (due to incorrect CLI args), an error is shown and
     /// the application exits. If help is requested (`-h` or `--help`), a help
@@ -160,6 +173,12 @@ pub enum ColorSetting {
 
     /// Never colorize output.
     Never,
+}
+
+impl Default for ColorSetting {
+    fn default() -> Self {
+        ColorSetting::Auto
+    }
 }
 
 impl FromStr for ColorSetting {
@@ -185,6 +204,12 @@ pub enum FormatSetting {
 
     /// Output as JSON.
     Json,
+}
+
+impl Default for FormatSetting {
+    fn default() -> Self {
+        FormatSetting::Pretty
+    }
 }
 
 impl FromStr for FormatSetting {

@@ -1,3 +1,11 @@
+//! Definition of the `Printer`.
+//!
+//! This is just an abstraction for everything that is printed to the screen
+//! (or logfile, if specified). These parameters influence printing:
+//! - `color`
+//! - `format` (and `quiet`)
+//! - `logfile`
+
 use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
@@ -13,7 +21,7 @@ pub(crate) struct Printer {
 
 impl Printer {
     /// Creates a new printer configured by the given arguments (`format`,
-    /// `color` and `logfile` options).
+    /// `quiet`, `color` and `logfile` options).
     pub(crate) fn new<D>(args: &Arguments, tests: &[Test<D>]) -> Self {
         let color_arg = args.color.unwrap_or(ColorSetting::Auto);
 
@@ -27,7 +35,7 @@ impl Printer {
             }
         } else {
             let choice = match color_arg {
-                ColorSetting::Auto=> ColorChoice::Auto,
+                ColorSetting::Auto => ColorChoice::Auto,
                 ColorSetting::Always => ColorChoice::Always,
                 ColorSetting::Never => ColorChoice::Never,
             };
@@ -45,7 +53,8 @@ impl Printer {
         //
         // Unicode is hard and there is no way we can properly align/pad the
         // test names and outcomes. Counting the number of code points is just
-        // a cheap way that works in most cases.
+        // a cheap way that works in most cases. Usually, these names are
+        // ASCII.
         let name_width = tests.iter()
             .map(|test| test.name.chars().count())
             .max()
@@ -196,6 +205,8 @@ impl Printer {
         }
     }
 
+    /// Prints a list of failed tests with their messages. This is only called
+    /// if there were any failures.
     pub(crate) fn print_failures<D>(&mut self, fails: &[(&Test<D>, Option<String>)]) {
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
@@ -218,6 +229,7 @@ impl Printer {
         }
     }
 
+    /// Prints a colored 'ok'/'FAILED'/'ignored'/'bench'.
     fn print_outcome_pretty(&mut self, outcome: &Outcome) {
         let s = match outcome {
             Outcome::Passed => "ok",
@@ -236,6 +248,7 @@ impl Printer {
     }
 }
 
+/// Returns the `ColorSpec` associated with the given outcome.
 fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
     let mut out = ColorSpec::new();
     let color = match outcome {

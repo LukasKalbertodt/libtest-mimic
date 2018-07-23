@@ -13,6 +13,7 @@ pub use args::{Arguments, ColorSetting, FormatSetting};
 
 
 /// Description of a single test.
+#[derive(Clone, Debug)]
 pub struct Test<D = ()> {
     /// The name of the test. It's displayed in the output and used for all
     /// kinds of filtering.
@@ -64,18 +65,35 @@ impl<D: Default> Test<D> {
 /// The outcome of performing a test.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
+    /// The test passed.
     Passed,
+
+    /// The test or benchmark failed (either compiler error or panicked).
     Failed {
         /// A message that is shown after all tests have been run.
         msg: Option<String>,
     },
+
+    /// The test or benchmark was ignored.
     Ignored,
+
+    /// The benchmark was successfully run.
     Measured {
+        /// Average time in ns.
         avg: u64,
+        /// Variance in ns.
         variance: u64,
     }
 }
 
+/// Contains information about the entire test run. Is returned by
+/// [`run_tests`].
+///
+/// This type is marked as `#[must_use]`. Usually, you just call
+/// [`exit()`][Conclusion::exit] on the result of `run_tests` to exit the application
+/// with the correct exit code. But you can also store this value and inspect
+/// its data.
+#[derive(Clone, Debug)]
 #[must_use]
 pub struct Conclusion {
     has_failed: bool,
@@ -95,6 +113,7 @@ impl Conclusion {
     }
 
     /// Exits the application with error code 101 if there were any failures.
+    /// Otherwise, returns normally.
     pub fn exit_if_failed(&self) {
         if self.has_failed {
             process::exit(101)
@@ -138,13 +157,10 @@ impl Conclusion {
 /// This is the central function of this crate. It provides the framework for
 /// the testing harness. It does all the printing and house keeping.
 ///
-/// This function exits the application with an appropriate error code and
-/// never returns!
-///
 /// This function tries to respect most options configured via CLI args. For
-/// example, output format and coloring are respected. However, some things
-/// cannot be handled by this function and you as a user need to take care to
-/// respect the CLI parameters. The following options are ignored by this
+/// example, filtering, output format and coloring are respected. However, some
+/// things cannot be handled by this function and *you* (as a user) need to
+/// take care of it yourself. The following options are ignored by this
 /// function and need to be manually checked:
 ///
 /// - `--nocapture` and capturing in general. It is expected that during the
@@ -156,17 +172,19 @@ impl Conclusion {
 /// Currently, the following CLI args are ignored, but are planned to be used
 /// in the future:
 /// - `--test-threads`
+/// - `--format=json`. If specified, this function will
+///   panic.
 ///
 /// All other flags and options are used properly.
+///
+/// The returned value contains a couple of useful information. See the
+/// [`Conclusion`] documentation for more information. If `--list` was
+/// specified, a list is printed and a dummy `Conclusion` is returned.
 pub fn run_tests<D>(
     args: &Arguments,
     tests: Vec<Test<D>>,
     run_test: impl Fn(&Test<D>) -> Outcome,
 ) -> Conclusion {
-    // TODO:
-    // - JSON
-    // - multiple threads
-
     // Apply filtering
     let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
         let len_before = tests.len() as u64;
@@ -202,6 +220,7 @@ pub fn run_tests<D>(
     // Create printer which is used for all output.
     let mut printer = printer::Printer::new(args, &tests);
 
+    // If `--list` is specified, just print the list and return.
     if args.list {
         printer.print_list(&tests);
         return Conclusion {
