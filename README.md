@@ -1,5 +1,8 @@
 libtest-mimic
 =============
+[![Build Status](https://img.shields.io/travis/LukasKalbertodt/libtest-mimic/master.svg)](https://travis-ci.org/LukasKalbertodt/libtest-mimic)
+[![crates.io version](https://img.shields.io/crates/v/libtest-mimic.svg)](https://crates.io/crates/libtest-mimic)
+[![docs](https://docs.rs/libtest-mimic/badge.svg)](https://docs.rs/libtest-mimic)
 
 Write your own test harness that looks and behaves like the built-in test harness (used by `rustc --test`)!
 
