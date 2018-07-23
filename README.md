@@ -15,7 +15,7 @@ This is a simple and small testing framework that mimics the original `libtest` 
 
 # Example
 
-```
+```rust
 extern crate libtest_mimic;
 
 use libtest_mimic::{Arguments, Test, Outcome, run_tests};
