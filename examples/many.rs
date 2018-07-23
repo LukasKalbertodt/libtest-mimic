@@ -1,7 +1,6 @@
-extern crate test_cli;
-extern crate structopt;
+extern crate libtest_mimic;
 
-use test_cli::{Arguments, Test, Outcome, run_tests};
+use libtest_mimic::{Arguments, Test, Outcome, run_tests};
 
 
 fn main() {
@@ -25,7 +24,7 @@ fn main() {
     run_tests(&args, tests, |test| {
         // We want this one test to fail
         if test.data == 53 {
-            Outcome::Failed
+            Outcome::Failed { msg: None }
         } else {
             Outcome::Passed
         }
