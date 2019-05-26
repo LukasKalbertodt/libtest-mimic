@@ -285,6 +285,7 @@ pub fn run_tests<D>(
     let mut failed_tests = Vec::new();
     let mut num_ignored = 0;
     let mut num_benches = 0;
+    let mut num_passed = 0;
     for test in &tests {
         if test.is_bench {
             num_benches += 1;
@@ -306,6 +307,7 @@ pub fn run_tests<D>(
         // Handle outcome
         printer.print_single_outcome(&outcome);
         match outcome {
+            Outcome::Passed => num_passed += 1,
             Outcome::Failed { msg } => failed_tests.push((test, msg)),
             Outcome::Ignored => num_ignored += 1,
             _ => {}
@@ -322,7 +324,7 @@ pub fn run_tests<D>(
     let conclusion = Conclusion {
         has_failed: num_failed != 0,
         num_filtered_out,
-        num_passed: tests.len() as u64 - num_failed - num_ignored - num_benches,
+        num_passed,
         num_failed,
         num_ignored,
         num_benches,
