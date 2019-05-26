@@ -243,9 +243,26 @@ impl Printer {
         self.out.reset().unwrap();
 
         if let Outcome::Measured { avg, variance } = outcome {
-            write!(self.out, ": {:>11} ns/iter (+/- {})", avg, variance).unwrap();
+            write!(
+                self.out,
+                ": {:>11} ns/iter (+/- {})",
+                fmt_with_thousand_sep(*avg),
+                fmt_with_thousand_sep(*variance),
+            ).unwrap();
         }
     }
+}
+
+/// Formats the given integer with `,` as thousand separator.
+pub fn fmt_with_thousand_sep(mut v: u64) -> String {
+    let mut out = String::new();
+    while v >= 1000 {
+        out = format!(",{:03}{}", v % 1000, out);
+        v /= 1000;
+    }
+    out = format!("{}{}", v, out);
+
+    out
 }
 
 /// Returns the `ColorSpec` associated with the given outcome.
