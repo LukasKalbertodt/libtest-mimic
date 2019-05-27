@@ -116,6 +116,7 @@ impl Printer {
                     self.kind_width,
                     self.name_width,
                 ).unwrap();
+                self.out.flush().unwrap();
             }
             FormatSetting::Terse => {
                 // In terse mode, nothing is printed before the job. Only
