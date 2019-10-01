@@ -28,14 +28,14 @@ use structopt;
 #[derive(StructOpt, Debug, Clone)]
 #[structopt(
     template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
-    raw(setting = "structopt::clap::AppSettings::DisableVersion"),
+    setting = structopt::clap::AppSettings::DisableVersion,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
         tests (set it to 1).\n\
         \n\
         All tests have their standard output and standard error captured by default. \n\
         This can be overridden with the --nocapture flag or setting RUST_TEST_NOCAPTURE \n\
-        environment variable to a value other than \"0\". Logging is not captured by default.",
+        environment variable to a value other than \"0\". Logging is not captured by default."
 )]
 pub struct Arguments {
     // ============== FLAGS ===================================================
@@ -47,7 +47,7 @@ pub struct Arguments {
     #[structopt(
         long = "--test",
         conflicts_with = "bench",
-        help = "Run tests and not benchmarks",
+        help = "Run tests and not benchmarks"
     )]
     pub test: bool,
 
@@ -63,14 +63,14 @@ pub struct Arguments {
     /// printed directly.
     #[structopt(
         long = "--nocapture",
-        help = "don't capture stdout/stderr of each task, allow printing directly",
+        help = "don't capture stdout/stderr of each task, allow printing directly"
     )]
     pub nocapture: bool,
 
     /// If set, filters are matched exactly rather than by substring.
     #[structopt(
         long = "--exact",
-        help = "Exactly match filters rather than by substring",
+        help = "Exactly match filters rather than by substring"
     )]
     pub exact: bool,
 
@@ -83,10 +83,9 @@ pub struct Arguments {
         short = "q",
         long = "--quiet",
         conflicts_with = "format",
-        help = "Display one character per test instead of one line. Alias to --format=terse",
+        help = "Display one character per test instead of one line. Alias to --format=terse"
     )]
     pub quiet: bool,
-
 
     // ============== OPTIONS =================================================
     /// Number of threads used for parallel testing.
@@ -101,7 +100,7 @@ pub struct Arguments {
     #[structopt(
         long = "--logfile",
         value_name = "PATH",
-        help = "Write logs to the specified file instead of stdout",
+        help = "Write logs to the specified file instead of stdout"
     )]
     pub logfile: Option<String>,
 
@@ -110,42 +109,41 @@ pub struct Arguments {
     #[structopt(
         long = "--skip",
         value_name = "FILTER",
-        raw(number_of_values = "1"),
-        help = "Skip tests whose names contain FILTER (this flag can be used multiple times)",
+        number_of_values = 1,
+        help = "Skip tests whose names contain FILTER (this flag can be used multiple times)"
     )]
     pub skip: Vec<String>,
 
     /// Specifies whether or not to color the output.
     #[structopt(
         long = "--color",
-        raw(possible_values = r#"&["auto", "always", "never"]"#),
+        possible_values = &["auto", "always", "never"],
         value_name = "auto|always|never",
         help = "Configure coloring of output: \n\
-            - auto = colorize if stdout is a tty and tests are run on serially (default)\n\
-            - always = always colorize output\n\
-            - never = never colorize output\n",
+                - auto = colorize if stdout is a tty and tests are run on serially (default)\n\
+                - always = always colorize output\n\
+                - never = never colorize output\n"
     )]
     pub color: Option<ColorSetting>,
 
     /// Specifies the format of the output.
     #[structopt(
         long = "--format",
-        raw(possible_values = r#"&["pretty", "terse", "json"]"#),
+        possible_values = &["pretty", "terse", "json"],
         value_name = "pretty|terse|json",
         help = "Configure formatting of output: \n\
-            - pretty = Print verbose output\n\
-            - terse = Display one character per test\n\
-            - json = Output a json document\n",
+                - pretty = Print verbose output\n\
+                - terse = Display one character per test\n\
+                - json = Output a json document\n"
     )]
     pub format: Option<FormatSetting>,
-
 
     // ============== POSITIONAL VALUES =======================================
     /// Filter string. Only tests which contain this string are run.
     #[structopt(
         name = "FILTER",
         help = "The FILTER string is tested against the name of all tests, and only those tests \
-            whose names contain the filter are run.",
+                whose names contain the filter are run."
     )]
     pub filter_string: Option<String>,
 }

@@ -16,5 +16,5 @@ readme = "README.md"
 
 
 [dependencies]
-structopt = "0.2"
-termcolor = "0.3"
+structopt = "0.3.2"
+termcolor = "1.0.5"
