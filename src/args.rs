@@ -28,7 +28,7 @@ use structopt;
 #[derive(StructOpt, Debug, Clone)]
 #[structopt(
     template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
-    raw(setting = "structopt::clap::AppSettings::DisableVersion"),
+    setting = structopt::clap::AppSettings::DisableVersion,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
         tests (set it to 1).\n\
@@ -87,12 +87,11 @@ pub struct Arguments {
     )]
     pub quiet: bool,
 
-
     // ============== OPTIONS =================================================
     /// Number of threads used for parallel testing.
     #[structopt(
         long = "--test-threads",
-        help = "Number of threads used for running tests in parallel"
+        help = "Number of threads used for running tests in parallel",
     )]
     pub num_threads: Option<u32>,
 
@@ -110,7 +109,7 @@ pub struct Arguments {
     #[structopt(
         long = "--skip",
         value_name = "FILTER",
-        raw(number_of_values = "1"),
+        number_of_values = 1,
         help = "Skip tests whose names contain FILTER (this flag can be used multiple times)",
     )]
     pub skip: Vec<String>,
@@ -118,7 +117,7 @@ pub struct Arguments {
     /// Specifies whether or not to color the output.
     #[structopt(
         long = "--color",
-        raw(possible_values = r#"&["auto", "always", "never"]"#),
+        possible_values = &["auto", "always", "never"],
         value_name = "auto|always|never",
         help = "Configure coloring of output: \n\
             - auto = colorize if stdout is a tty and tests are run on serially (default)\n\
@@ -130,7 +129,7 @@ pub struct Arguments {
     /// Specifies the format of the output.
     #[structopt(
         long = "--format",
-        raw(possible_values = r#"&["pretty", "terse", "json"]"#),
+        possible_values = &["pretty", "terse", "json"],
         value_name = "pretty|terse|json",
         help = "Configure formatting of output: \n\
             - pretty = Print verbose output\n\
@@ -139,13 +138,12 @@ pub struct Arguments {
     )]
     pub format: Option<FormatSetting>,
 
-
     // ============== POSITIONAL VALUES =======================================
     /// Filter string. Only tests which contain this string are run.
     #[structopt(
         name = "FILTER",
         help = "The FILTER string is tested against the name of all tests, and only those tests \
-            whose names contain the filter are run.",
+                whose names contain the filter are run.",
     )]
     pub filter_string: Option<String>,
 }
