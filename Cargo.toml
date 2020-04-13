@@ -16,5 +16,7 @@ readme = "README.md"
 
 
 [dependencies]
+crossbeam = "0.7.3"
+rayon = "1.3.0"
 structopt = "0.3.2"
 termcolor = "1.0.5"

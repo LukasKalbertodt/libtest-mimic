@@ -43,6 +43,8 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
+extern crate crossbeam;
+extern crate rayon;
 #[macro_use]
 extern crate structopt;
 extern crate termcolor;
@@ -50,6 +52,7 @@ extern crate termcolor;
 use std::{
     process,
 };
+use rayon::prelude::*;
 
 mod args;
 mod printer;
@@ -225,10 +228,10 @@ impl Conclusion {
 /// The returned value contains a couple of useful information. See the
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
-pub fn run_tests<D>(
+pub fn run_tests<D: 'static + Send + Sync>(
     args: &Arguments,
     tests: Vec<Test<D>>,
-    run_test: impl Fn(&Test<D>) -> Outcome,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
 ) -> Conclusion {
     // Apply filtering
     let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
@@ -281,28 +284,43 @@ pub fn run_tests<D>(
     // Print number of tests
     printer.print_title(tests.len() as u64);
 
+    let (send, recv) = crossbeam::channel::bounded(4);
+    {
+        let Arguments {
+            ignored: args_ignored,
+            test: args_test,
+            bench: args_bench,
+            ..
+        } = *args;
+        rayon::spawn(move || {
+            tests.into_par_iter().for_each(|test| {
+                let is_ignored = (test.is_ignored && !args_ignored)
+                    || (test.is_bench && args_test)
+                    || (!test.is_bench && args_bench);
+
+                let outcome = if is_ignored {
+                    Outcome::Ignored
+                } else {
+                    // Run the given function
+                    run_test(&test)
+                };
+                // It doesn't matter if the channel got closed.
+                let _ = send.send((test, outcome));
+            });
+        });
+    }
+
     // Execute all tests
     let mut failed_tests = Vec::new();
     let mut num_ignored = 0;
     let mut num_benches = 0;
     let mut num_passed = 0;
-    for test in &tests {
+    for (test, outcome) in recv {
         if test.is_bench {
             num_benches += 1;
         }
 
         printer.print_test(&test.name, &test.kind);
-
-        let is_ignored = (test.is_ignored && !args.ignored)
-            || (test.is_bench && args.test)
-            || (!test.is_bench && args.bench);
-
-        let outcome = if is_ignored {
-            Outcome::Ignored
-        } else {
-            // Run the given function
-            run_test(&test)
-        };
 
         // Handle outcome
         printer.print_single_outcome(&outcome);
