@@ -43,7 +43,7 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-extern crate crossbeam;
+extern crate crossbeam_channel;
 extern crate rayon;
 #[macro_use]
 extern crate structopt;
@@ -222,7 +222,7 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
         ..
     } = *args;
     // We will send the outomes through this channel.
-    let (send, recv) = crossbeam::channel::bounded(4);
+    let (send, recv) = crossbeam_channel::bounded(4);
     // This spawns a thread on the pool and returns immediately.
     pool.spawn(move || {
         // This will split the workload across the thread pool automatically.
