@@ -131,7 +131,7 @@ pub enum Outcome {
         avg: u64,
         /// Variance in ns.
         variance: u64,
-    }
+    },
 }
 
 /// Contains information about the entire test run. Is returned by
@@ -200,6 +200,52 @@ impl Conclusion {
     }
 }
 
+/// Run the given tests in parallel in a thread pool.
+fn run_tests_threaded<D: 'static + Send + Sync>(
+    args: &Arguments,
+    tests: Vec<Test<D>>,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
+) -> impl IntoIterator<Item = (Test<D>, Outcome)> {
+    // Construct a pool with as many threads as specified.
+    let mut builder = rayon::ThreadPoolBuilder::new();
+    if let Some(n) = args.num_threads {
+        builder = builder.num_threads(n);
+    }
+    let pool = builder.build().expect("Unable to spawn threads");
+
+    // The spawned threads might outlive the calling function so they can't access `args` as a
+    // reference. So we copy the bits we're interested in.
+    let Arguments {
+        ignored: args_ignored,
+        test: args_test,
+        bench: args_bench,
+        ..
+    } = *args;
+    // We will send the outomes through this channel.
+    let (send, recv) = crossbeam::channel::bounded(4);
+    // This spawns a thread on the pool and returns immediately.
+    pool.spawn(move || {
+        // This will split the workload across the thread pool automatically.
+        tests.into_par_iter().for_each(|test| {
+            let is_ignored = (test.is_ignored && !args_ignored)
+                || (test.is_bench && args_test)
+                || (!test.is_bench && args_bench);
+
+            let outcome = if is_ignored {
+                Outcome::Ignored
+            } else {
+                // Run the given function
+                run_test(&test)
+            };
+            // It doesn't matter if the channel got closed so we can ignore the Result.
+            let _ = send.send((test, outcome));
+        });
+    });
+
+    // Return the other end of the channel
+    recv
+}
+
 /// Runs all given tests with the given test runner.
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -217,9 +263,8 @@ impl Conclusion {
 ///   If however, the test is part of the current application and it uses
 ///   `println!()` and friends, it might be impossible to capture the output.
 ///
-/// Currently, the following CLI args are ignored, but are planned to be used
+/// Currently, the following CLI arg is ignored, but is planned to be used
 /// in the future:
-/// - `--test-threads`
 /// - `--format=json`. If specified, this function will
 ///   panic.
 ///
@@ -284,51 +329,26 @@ pub fn run_tests<D: 'static + Send + Sync>(
     // Print number of tests
     printer.print_title(tests.len() as u64);
 
-    let (send, recv) = crossbeam::channel::bounded(4);
-    {
-        let Arguments {
-            ignored: args_ignored,
-            test: args_test,
-            bench: args_bench,
-            ..
-        } = *args;
-        rayon::spawn(move || {
-            tests.into_par_iter().for_each(|test| {
-                let is_ignored = (test.is_ignored && !args_ignored)
-                    || (test.is_bench && args_test)
-                    || (!test.is_bench && args_bench);
-
-                let outcome = if is_ignored {
-                    Outcome::Ignored
-                } else {
-                    // Run the given function
-                    run_test(&test)
-                };
-                // It doesn't matter if the channel got closed.
-                let _ = send.send((test, outcome));
-            });
-        });
-    }
-
-    // Execute all tests
     let mut failed_tests = Vec::new();
     let mut num_ignored = 0;
     let mut num_benches = 0;
     let mut num_passed = 0;
-    for (test, outcome) in recv {
+    // Execute all tests
+    for (test, outcome) in run_tests_threaded(args, tests, run_test) {
+        // Print `test foo    ... ok` etc.
+        printer.print_test(&test.name, &test.kind);
+        printer.print_single_outcome(&outcome);
+
         if test.is_bench {
             num_benches += 1;
         }
 
-        printer.print_test(&test.name, &test.kind);
-
         // Handle outcome
-        printer.print_single_outcome(&outcome);
         match outcome {
             Outcome::Passed => num_passed += 1,
             Outcome::Failed { msg } => failed_tests.push((test, msg)),
             Outcome::Ignored => num_ignored += 1,
-            _ => {}
+            Outcome::Measured { .. } => {}
         }
     }
 
