@@ -234,8 +234,8 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     // reference.
     let args = args.clone();
 
-    // We will send the outomes through this channel.
-    let (send, recv) = crossbeam_channel::bounded(4);
+    // We will send the events through this channel.
+    let (send, recv) = crossbeam_channel::bounded(0);
 
     // This spawns a thread on the pool and returns immediately.
     pool.spawn(move || {
