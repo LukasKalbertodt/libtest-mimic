@@ -213,23 +213,20 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     }
     let pool = builder.build().expect("Unable to spawn threads");
 
-    // The spawned threads might outlive the calling function so they can't access `args` as a
-    // reference. So we copy the bits we're interested in.
-    let Arguments {
-        ignored: args_ignored,
-        test: args_test,
-        bench: args_bench,
-        ..
-    } = *args;
+    // The spawned threads could outlive the calling function so we can't pass `args` as a
+    // reference.
+    let args = args.clone();
+
     // We will send the outomes through this channel.
     let (send, recv) = crossbeam_channel::bounded(4);
+
     // This spawns a thread on the pool and returns immediately.
     pool.spawn(move || {
         // This will split the workload across the thread pool automatically.
         tests.into_par_iter().for_each(|test| {
-            let is_ignored = (test.is_ignored && !args_ignored)
-                || (test.is_bench && args_test)
-                || (!test.is_bench && args_bench);
+            let is_ignored = (test.is_ignored && !args.ignored)
+                || (test.is_bench && args.test)
+                || (!test.is_bench && args.bench);
 
             let outcome = if is_ignored {
                 Outcome::Ignored
@@ -237,6 +234,7 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
                 // Run the given function
                 run_test(&test)
             };
+
             // It doesn't matter if the channel got closed so we can ignore the Result.
             let _ = send.send((test, outcome));
         });
@@ -333,6 +331,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
     let mut num_ignored = 0;
     let mut num_benches = 0;
     let mut num_passed = 0;
+
     // Execute all tests
     for (test, outcome) in run_tests_threaded(args, tests, run_test) {
         // Print `test foo    ... ok` etc.
