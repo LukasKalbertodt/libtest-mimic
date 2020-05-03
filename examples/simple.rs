@@ -1,5 +1,6 @@
 extern crate libtest_mimic;
 
+use std::{thread, time};
 use libtest_mimic::{Arguments, Test, Outcome, run_tests};
 
 
@@ -9,8 +10,9 @@ fn main() {
     let tests = vec![
         Test::test("toph"),
         Test::test("sokka"),
+        Test::test("long_computation"),
         Test {
-            name: "long_computation".into(),
+            name: "longer_computation".into(),
             kind: "".into(),
             is_ignored: true,
             is_bench: false,
@@ -29,6 +31,9 @@ fn main() {
     run_tests(&args, tests, |test| {
         if test.name == "sokka" {
             Outcome::Failed { msg: Some("Sokka tripped and fell :(".into()) }
+        } else if test.name == "long_computation" {
+            thread::sleep(time::Duration::from_secs(1));
+            Outcome::Passed
         } else {
             Outcome::Passed
         }

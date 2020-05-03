@@ -134,6 +134,23 @@ pub enum Outcome {
     },
 }
 
+/// Event indicating that a given test has started running or has completed.
+#[derive(Debug)]
+pub enum RunnerEvent<D> {
+    Started {
+        /// Name of the corresponding test.
+        name: String,
+        /// Kind of the corresponding test.
+        kind: String,
+    },
+    Completed {
+        /// Corresponding test.
+        test: Test<D>,
+        /// Outcome of having run the test.
+        outcome: Outcome,
+    },
+}
+
 /// Contains information about the entire test run. Is returned by
 /// [`run_tests`].
 ///
@@ -205,7 +222,7 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     args: &Arguments,
     tests: Vec<Test<D>>,
     run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
-) -> impl IntoIterator<Item = (Test<D>, Outcome)> {
+) -> impl IntoIterator<Item = RunnerEvent<D>> {
     // Construct a pool with as many threads as specified.
     let mut builder = rayon::ThreadPoolBuilder::new();
     if let Some(n) = args.num_threads {
@@ -224,6 +241,12 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     pool.spawn(move || {
         // This will split the workload across the thread pool automatically.
         tests.into_par_iter().for_each(|test| {
+            // It doesn't matter if the channel got closed so we can ignore the Result here.
+            let _ = send.send(RunnerEvent::Started {
+                name: test.name.clone(),
+                kind: test.kind.clone(),
+            });
+
             let is_ignored = (test.is_ignored && !args.ignored)
                 || (test.is_bench && args.test)
                 || (!test.is_bench && args.bench);
@@ -235,8 +258,8 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
                 run_test(&test)
             };
 
-            // It doesn't matter if the channel got closed so we can ignore the Result.
-            let _ = send.send((test, outcome));
+            // It doesn't matter if the channel got closed so we can ignore the Result here.
+            let _ = send.send(RunnerEvent::Completed { test, outcome });
         });
     });
 
@@ -333,21 +356,35 @@ pub fn run_tests<D: 'static + Send + Sync>(
     let mut num_passed = 0;
 
     // Execute all tests
-    for (test, outcome) in run_tests_threaded(args, tests, run_test) {
-        // Print `test foo    ... ok` etc.
-        printer.print_test(&test.name, &test.kind);
-        printer.print_single_outcome(&outcome);
+    for event in run_tests_threaded(args, tests, run_test) {
+        match event {
+            RunnerEvent::Started { name, kind } => {
+                // If tests are being run sequentially, we print the test name when it starts
+                // running and the result after it is done. Otherwise we print both at the same time.
+                if args.num_threads == Some(1) {
+                    // Print `test foo    ...`.
+                    printer.print_test(&name, &kind);
+                }
+            }
+            RunnerEvent::Completed { test, outcome } => {
+                if args.num_threads != Some(1) {
+                    // Print `test foo    ...` if it hasn't already been printed.
+                    printer.print_test(&test.name, &test.kind);
+                }
+                printer.print_single_outcome(&outcome);
 
-        if test.is_bench {
-            num_benches += 1;
-        }
+                if test.is_bench {
+                    num_benches += 1;
+                }
 
-        // Handle outcome
-        match outcome {
-            Outcome::Passed => num_passed += 1,
-            Outcome::Failed { msg } => failed_tests.push((test, msg)),
-            Outcome::Ignored => num_ignored += 1,
-            Outcome::Measured { .. } => {}
+                // Handle outcome
+                match outcome {
+                    Outcome::Passed => num_passed += 1,
+                    Outcome::Failed { msg } => failed_tests.push((test, msg)),
+                    Outcome::Ignored => num_ignored += 1,
+                    Outcome::Measured { .. } => {}
+                }
+            }
         }
     }
 
