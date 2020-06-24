@@ -43,6 +43,8 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
+extern crate crossbeam_channel;
+extern crate rayon;
 #[macro_use]
 extern crate structopt;
 extern crate termcolor;
@@ -50,6 +52,7 @@ extern crate termcolor;
 use std::{
     process,
 };
+use rayon::prelude::*;
 
 mod args;
 mod printer;
@@ -128,7 +131,24 @@ pub enum Outcome {
         avg: u64,
         /// Variance in ns.
         variance: u64,
-    }
+    },
+}
+
+/// Event indicating that a given test has started running or has completed.
+#[derive(Debug)]
+pub enum RunnerEvent<D> {
+    Started {
+        /// Name of the corresponding test.
+        name: String,
+        /// Kind of the corresponding test.
+        kind: String,
+    },
+    Completed {
+        /// Corresponding test.
+        test: Test<D>,
+        /// Outcome of having run the test.
+        outcome: Outcome,
+    },
 }
 
 /// Contains information about the entire test run. Is returned by
@@ -197,6 +217,56 @@ impl Conclusion {
     }
 }
 
+/// Run the given tests in parallel in a thread pool.
+fn run_tests_threaded<D: 'static + Send + Sync>(
+    args: &Arguments,
+    tests: Vec<Test<D>>,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
+) -> impl IntoIterator<Item = RunnerEvent<D>> {
+    // Construct a pool with as many threads as specified.
+    let mut builder = rayon::ThreadPoolBuilder::new();
+    if let Some(n) = args.num_threads {
+        builder = builder.num_threads(n);
+    }
+    let pool = builder.build().expect("Unable to spawn threads");
+
+    // The spawned threads could outlive the calling function so we can't pass `args` as a
+    // reference.
+    let args = args.clone();
+
+    // We will send the events through this channel.
+    let (send, recv) = crossbeam_channel::bounded(0);
+
+    // This spawns a thread on the pool and returns immediately.
+    pool.spawn(move || {
+        // This will split the workload across the thread pool automatically.
+        tests.into_par_iter().for_each(|test| {
+            // It doesn't matter if the channel got closed so we can ignore the Result here.
+            let _ = send.send(RunnerEvent::Started {
+                name: test.name.clone(),
+                kind: test.kind.clone(),
+            });
+
+            let is_ignored = (test.is_ignored && !args.ignored)
+                || (test.is_bench && args.test)
+                || (!test.is_bench && args.bench);
+
+            let outcome = if is_ignored {
+                Outcome::Ignored
+            } else {
+                // Run the given function
+                run_test(&test)
+            };
+
+            // It doesn't matter if the channel got closed so we can ignore the Result here.
+            let _ = send.send(RunnerEvent::Completed { test, outcome });
+        });
+    });
+
+    // Return the other end of the channel
+    recv
+}
+
 /// Runs all given tests with the given test runner.
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -214,9 +284,8 @@ impl Conclusion {
 ///   If however, the test is part of the current application and it uses
 ///   `println!()` and friends, it might be impossible to capture the output.
 ///
-/// Currently, the following CLI args are ignored, but are planned to be used
+/// Currently, the following CLI arg is ignored, but is planned to be used
 /// in the future:
-/// - `--test-threads`
 /// - `--format=json`. If specified, this function will
 ///   panic.
 ///
@@ -225,10 +294,10 @@ impl Conclusion {
 /// The returned value contains a couple of useful information. See the
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
-pub fn run_tests<D>(
+pub fn run_tests<D: 'static + Send + Sync>(
     args: &Arguments,
     tests: Vec<Test<D>>,
-    run_test: impl Fn(&Test<D>) -> Outcome,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
 ) -> Conclusion {
     // Apply filtering
     let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
@@ -281,36 +350,41 @@ pub fn run_tests<D>(
     // Print number of tests
     printer.print_title(tests.len() as u64);
 
-    // Execute all tests
     let mut failed_tests = Vec::new();
     let mut num_ignored = 0;
     let mut num_benches = 0;
     let mut num_passed = 0;
-    for test in &tests {
-        if test.is_bench {
-            num_benches += 1;
-        }
 
-        printer.print_test(&test.name, &test.kind);
+    // Execute all tests
+    for event in run_tests_threaded(args, tests, run_test) {
+        match event {
+            RunnerEvent::Started { name, kind } => {
+                // If tests are being run sequentially, we print the test name when it starts
+                // running and the result after it is done. Otherwise we print both at the same time.
+                if args.num_threads == Some(1) {
+                    // Print `test foo    ...`.
+                    printer.print_test(&name, &kind);
+                }
+            }
+            RunnerEvent::Completed { test, outcome } => {
+                if args.num_threads != Some(1) {
+                    // Print `test foo    ...` if it hasn't already been printed.
+                    printer.print_test(&test.name, &test.kind);
+                }
+                printer.print_single_outcome(&outcome);
 
-        let is_ignored = (test.is_ignored && !args.ignored)
-            || (test.is_bench && args.test)
-            || (!test.is_bench && args.bench);
+                if test.is_bench {
+                    num_benches += 1;
+                }
 
-        let outcome = if is_ignored {
-            Outcome::Ignored
-        } else {
-            // Run the given function
-            run_test(&test)
-        };
-
-        // Handle outcome
-        printer.print_single_outcome(&outcome);
-        match outcome {
-            Outcome::Passed => num_passed += 1,
-            Outcome::Failed { msg } => failed_tests.push((test, msg)),
-            Outcome::Ignored => num_ignored += 1,
-            _ => {}
+                // Handle outcome
+                match outcome {
+                    Outcome::Passed => num_passed += 1,
+                    Outcome::Failed { msg } => failed_tests.push((test, msg)),
+                    Outcome::Ignored => num_ignored += 1,
+                    Outcome::Measured { .. } => {}
+                }
+            }
         }
     }
 
