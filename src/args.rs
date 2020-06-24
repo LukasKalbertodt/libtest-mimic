@@ -157,6 +157,16 @@ impl Arguments {
     pub fn from_args() -> Self {
         structopt::StructOpt::from_args()
     }
+
+    /// Like `from_args()`, but operates on an explicit iterator and not the global arguments.
+    pub fn from_iter<I>(iter: I) -> Self
+    where
+        Self: Sized,
+        I: IntoIterator,
+        I::Item: Into<std::ffi::OsString> + Clone,
+    {
+        structopt::StructOpt::from_iter(iter)
+    }
 }
 
 /// Possible values for the `--color` option.
