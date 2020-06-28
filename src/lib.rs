@@ -359,8 +359,9 @@ pub fn run_tests<D: 'static + Send + Sync>(
     for event in run_tests_threaded(args, tests, run_test) {
         match event {
             RunnerEvent::Started { name, kind } => {
-                // If tests are being run sequentially, we print the test name when it starts
-                // running and the result after it is done. Otherwise we print both at the same time.
+                // If tests are being run sequentially, we print the test name
+                // when it starts running and the result after it is done.
+                // Otherwise we print both at the same time.
                 if args.num_threads == Some(1) {
                     // Print `test foo    ...`.
                     printer.print_test(&name, &kind);
