@@ -267,6 +267,39 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     recv
 }
 
+/// Run the given tests one by one in the current thread.
+fn run_tests_serialized<D: 'static + Send + Sync>(
+    args: &Arguments,
+    tests: Vec<Test<D>>,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
+) -> impl IntoIterator<Item = RunnerEvent<D>> {
+    let args_ignored = args.ignored;
+    let args_test = args.test;
+    let args_bench = args.bench;
+    let run_test = std::sync::Arc::new(run_test);
+    tests.into_iter().flat_map(move |test| {
+        let run_test = run_test.clone();
+        std::iter::once(RunnerEvent::Started {
+            name: test.name.clone(),
+            kind: test.kind.clone()
+        })
+        .chain(std::iter::once_with(move || {
+            let is_ignored = (test.is_ignored && !args_ignored)
+                || (test.is_bench && args_test)
+                || (!test.is_bench && args_bench);
+
+            let outcome = if is_ignored {
+                Outcome::Ignored
+            } else {
+                // Run the given function
+                run_test(&test)
+            };
+
+            RunnerEvent::Completed { test, outcome }
+        }))
+    })
+}
+
 /// Runs all given tests with the given test runner.
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -356,7 +389,12 @@ pub fn run_tests<D: 'static + Send + Sync>(
     let mut num_passed = 0;
 
     // Execute all tests
-    for event in run_tests_threaded(args, tests, run_test) {
+    let events = match args.num_threads {
+        Some(1) => rayon::iter::Either::Left(run_tests_serialized(args, tests, run_test)),
+        _ => rayon::iter::Either::Right(run_tests_threaded(args, tests, run_test)),
+    };
+
+    for event in events.into_iter() {
         match event {
             RunnerEvent::Started { name, kind } => {
                 // If tests are being run sequentially, we print the test name
