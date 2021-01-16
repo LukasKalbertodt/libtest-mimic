@@ -388,6 +388,17 @@ pub fn run_tests<D: 'static + Send + Sync>(
     let mut num_benches = 0;
     let mut num_passed = 0;
 
+    let run_test = std::sync::Arc::new(run_test);
+    let run_test = move |test: &Test<D>| {
+        let run_test = run_test.clone();
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            run_test(test)
+        }))
+        .unwrap_or_else(|_e| {
+            Outcome::Failed { msg: None }
+        })
+    };
+
     // Execute all tests
     let events = match args.num_threads {
         Some(1) => rayon::iter::Either::Left(run_tests_serialized(args, tests, run_test)),
