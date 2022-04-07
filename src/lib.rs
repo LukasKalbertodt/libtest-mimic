@@ -49,16 +49,13 @@ extern crate rayon;
 extern crate structopt;
 extern crate termcolor;
 
-use std::{
-    process,
-};
 use rayon::prelude::*;
+use std::process;
 
 mod args;
 mod printer;
 
 pub use args::{Arguments, ColorSetting, FormatSetting};
-
 
 /// Description of a single test.
 #[derive(Clone, Debug)]

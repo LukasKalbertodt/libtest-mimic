@@ -10,7 +10,7 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use ::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
+use {Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,
@@ -55,12 +55,14 @@ impl Printer {
         // test names and outcomes. Counting the number of code points is just
         // a cheap way that works in most cases. Usually, these names are
         // ASCII.
-        let name_width = tests.iter()
+        let name_width = tests
+            .iter()
             .map(|test| test.name.chars().count())
             .max()
             .unwrap_or(0);
 
-        let kind_width = tests.iter()
+        let kind_width = tests
+            .iter()
             .map(|test| {
                 if test.kind.is_empty() {
                     0
@@ -84,11 +86,7 @@ impl Printer {
     pub(crate) fn print_title(&mut self, num_tests: u64) {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
-                let plural_s = if num_tests == 1 {
-                    ""
-                } else {
-                    "s"
-                };
+                let plural_s = if num_tests == 1 { "" } else { "s" };
 
                 writeln!(self.out).unwrap();
                 writeln!(self.out, "running {} test{}", num_tests, plural_s).unwrap();
@@ -111,11 +109,9 @@ impl Printer {
                 write!(
                     self.out,
                     "test {: <2$}{: <3$} ... ",
-                    kind,
-                    name,
-                    self.kind_width,
-                    self.name_width,
-                ).unwrap();
+                    kind, name, self.kind_width, self.name_width,
+                )
+                .unwrap();
                 self.out.flush().unwrap();
             }
             FormatSetting::Terse => {
@@ -157,10 +153,7 @@ impl Printer {
     }
 
     /// Prints the summary line after all tests have been executed.
-    pub(crate) fn print_summary(
-        &mut self,
-        conclusion: &Conclusion,
-    ) {
+    pub(crate) fn print_summary(&mut self, conclusion: &Conclusion) {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
                 let outcome = if conclusion.has_failed() {
@@ -180,7 +173,8 @@ impl Printer {
                     conclusion.num_ignored(),
                     conclusion.num_benches(),
                     conclusion.num_filtered_out(),
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.out).unwrap();
             }
             FormatSetting::Json => unimplemented!(),
@@ -202,7 +196,8 @@ impl Printer {
                 kind,
                 test.name,
                 if test.is_bench { "bench" } else { "test" },
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 
@@ -249,7 +244,8 @@ impl Printer {
                 ": {:>11} ns/iter (+/- {})",
                 fmt_with_thousand_sep(*avg),
                 fmt_with_thousand_sep(*variance),
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 }
