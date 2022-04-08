@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use structopt::StructOpt;
+use clap::Parser;
 
 /// Command line arguments.
 ///
@@ -25,10 +25,10 @@ use structopt::StructOpt;
 /// **Note**: just because all CLI args can be parsed, doesn't mean that they
 /// are all automatically used. Check [`run_tests`][::run_tests] for information on which
 /// arguments are automatically used and require special care.
-#[derive(StructOpt, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 #[structopt(
-    template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
-    setting = structopt::clap::AppSettings::DisableVersion,
+    help_template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
+    disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
         tests (set it to 1).\n\
@@ -80,7 +80,7 @@ pub struct Arguments {
     /// This is an alias for `--format=terse`. If this is set, `format` is
     /// `None`.
     #[structopt(
-        short = "q",
+        short = 'q',
         long = "--quiet",
         conflicts_with = "format",
         help = "Display one character per test instead of one line. Alias to --format=terse",
@@ -155,7 +155,7 @@ impl Arguments {
     /// the application exits. If help is requested (`-h` or `--help`), a help
     /// message is shown and the application exits, too.
     pub fn from_args() -> Self {
-        structopt::StructOpt::from_args()
+        Parser::parse()
     }
 
     /// Like `from_args()`, but operates on an explicit iterator and not the global arguments.
@@ -165,7 +165,7 @@ impl Arguments {
         I: IntoIterator,
         I::Item: Into<std::ffi::OsString> + Clone,
     {
-        structopt::StructOpt::from_iter(iter)
+        Parser::parse_from(iter)
     }
 }
 
