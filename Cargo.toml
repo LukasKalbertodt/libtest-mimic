@@ -2,6 +2,7 @@
 name = "libtest-mimic"
 version = "0.3.0"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
+edition = "2021"
 
 description = """
 Write your own test harness that looks and behaves like the built-in test \

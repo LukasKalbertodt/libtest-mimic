@@ -43,19 +43,13 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-extern crate crossbeam_channel;
-extern crate rayon;
-#[macro_use]
-extern crate structopt;
-extern crate termcolor;
-
 use rayon::prelude::*;
 use std::process;
 
 mod args;
 mod printer;
 
-pub use args::{Arguments, ColorSetting, FormatSetting};
+pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 
 
 /// Description of a single test.
