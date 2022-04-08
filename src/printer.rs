@@ -10,7 +10,7 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use {Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
+use crate::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,

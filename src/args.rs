@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use structopt;
+use structopt::StructOpt;
 
 /// Command line arguments.
 ///
