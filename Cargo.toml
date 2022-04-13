@@ -11,7 +11,7 @@ harness used by `rustc --test`
 documentation = "https://docs.rs/libtest-mimic"
 repository = "https://github.com/LukasKalbertodt/libtest-mimic"
 license = "MIT/Apache-2.0"
-keywords = ["libtest", "test", "built-in", "framework"]
+keywords = ["libtest", "test", "built-in", "framework", "harness"]
 categories = ["development-tools::testing", "development-tools::build-utils"]
 readme = "README.md"
 
