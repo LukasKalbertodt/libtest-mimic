@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Checks:
+# Checks
 # - trailing whitespaces (not allowed)
 # - single trailing newline (required)
 # - bad windows/mac line endings
@@ -60,7 +60,7 @@ fi
 
 ### windows and mac OS line endings =======================
 echo ""
-echo "=== Searching for files with wrong line endings ======================="
+echo "=== Searching for files with wrong line endings ==================="
 
 FOUNDLE=0
 for f in $(find $FOLDER -regex $FILES -not -regex $EXCLUDE); do
@@ -78,9 +78,9 @@ else
     ERROR=1
 fi
 
-## windows and mac OS line endings =======================
+## tab characters =======================
 echo ""
-echo "=== Searching for files with tab characters ==========================="
+echo "=== Searching for files with tab characters ================="
 
 FOUNDTAB=0
 for f in $(find $FOLDER -regex $FILES -not -regex $EXCLUDE); do
