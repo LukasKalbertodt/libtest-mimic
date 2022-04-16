@@ -181,8 +181,23 @@ impl Printer {
     }
 
     /// Prints a list of all tests. Used if `--list` is set.
-    pub(crate) fn print_list<D>(&mut self, tests: &[Test<D>]) {
+    pub(crate) fn print_list<D>(&mut self, tests: &[Test<D>], ignored: bool) {
+        Self::write_list(tests, ignored, &mut self.out).unwrap();
+    }
+
+    pub(crate) fn write_list<D>(
+        tests: &[Test<D>],
+        ignored: bool,
+        mut out: impl std::io::Write,
+    ) -> std::io::Result<()> {
         for test in tests {
+            // libtest prints out:
+            // * all tests without `--ignored`
+            // * just the ignored tests with `--ignored`
+            if ignored && !test.is_ignored {
+                continue;
+            }
+
             let kind = if test.kind.is_empty() {
                 format!("")
             } else {
@@ -190,13 +205,15 @@ impl Printer {
             };
 
             writeln!(
-                self.out,
+                out,
                 "{}{}: {}",
                 kind,
                 test.name,
                 if test.is_bench { "bench" } else { "test" },
-            ).unwrap();
+            )?;
         }
+
+        Ok(())
     }
 
     /// Prints a list of failed tests with their messages. This is only called
@@ -270,4 +287,65 @@ fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
     };
     out.set_fg(Some(color));
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn list_ignored() {
+        let tests = vec![
+            Test {
+                name: "foo".into(),
+                kind: "".into(),
+                is_ignored: false,
+                is_bench: false,
+                data: (),
+            },
+            Test {
+                name: "bar".into(),
+                kind: "bar-test-kind".into(),
+                is_ignored: true,
+                is_bench: false,
+                data: (),
+            },
+            Test {
+                name: "baz".into(),
+                kind: "baz-test-kind".into(),
+                is_ignored: false,
+                is_bench: true,
+                data: (),
+            },
+            Test {
+                name: "quux".into(),
+                kind: "".into(),
+                is_ignored: true,
+                is_bench: true,
+                data: (),
+            },
+        ];
+
+        {
+            // Without --ignored (all tests)
+            let mut output: Vec<u8> = Vec::new();
+            Printer::write_list(&tests, false, &mut output).unwrap();
+
+            assert_eq!(
+                String::from_utf8_lossy(&output),
+                "foo: test\n[bar-test-kind] bar: test\n[baz-test-kind] baz: bench\nquux: bench\n"
+            );
+        }
+
+        {
+            // With --ignored (just ignored tests)
+            let mut output: Vec<u8> = Vec::new();
+            Printer::write_list(&tests, true, &mut output).unwrap();
+
+            assert_eq!(
+                String::from_utf8_lossy(&output),
+                "[bar-test-kind] bar: test\nquux: bench\n"
+            );
+        }
+    }
 }

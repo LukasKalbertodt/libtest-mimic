@@ -328,7 +328,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
 
     // If `--list` is specified, just print the list and return.
     if args.list {
-        printer.print_list(&tests);
+        printer.print_list(&tests, args.ignored);
         return Conclusion {
             has_failed: false,
             num_filtered_out: 0,
