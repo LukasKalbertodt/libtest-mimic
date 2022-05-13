@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.4.0] - 2022-05-13
+- **Breaking**: Update to Rust 2021, bumping MSRV to 1.56
+- Fix `--list --ignored` behavior
+
+
 ## [0.3.0] - 2020-06-28
 ### Added
 - Add support for running tests in parallel #4
@@ -24,7 +29,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.1.0...v0.2.0
 [0.1.1]: https://github.com/LukasKalbertodt/stable-vec/compare/v0.1.0...v0.1.1
