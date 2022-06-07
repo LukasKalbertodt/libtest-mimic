@@ -4,7 +4,7 @@ libtest-mimic
 [![crates.io version](https://img.shields.io/crates/v/libtest-mimic.svg)](https://crates.io/crates/libtest-mimic)
 [![docs](https://docs.rs/libtest-mimic/badge.svg)](https://docs.rs/libtest-mimic)
 
-Write your own test harness that looks and behaves like the built-in test harness (used by `rustc --test`)!
+Write your own test harness that looks and behaves like the built-in test harness (used by `rustc --test`)! (MSRV 1.56)
 
 This is a simple and small testing framework that mimics the original `libtest` (used by `rustc --test`). That means: all output looks pretty much like `cargo test` and most CLI arguments are understood and used. With that plumbing work out of the way, your test runner can concentrate on the actual testing.
 
