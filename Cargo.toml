@@ -1,6 +1,6 @@
 [package]
 name = "libtest-mimic"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2021"
 rust = "1.56"

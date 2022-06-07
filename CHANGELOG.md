@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.4.1] - 2022-06-07
+
+- Add `rust = "1.56"` to `Cargo.toml`, stating the existing MSRV.
+- Update `crossbeam-channel` to deduplicate some indirect dependencies.
+
 ## [0.4.0] - 2022-05-13
 - **Breaking**: Update to Rust 2021, bumping MSRV to 1.56
 - Fix `--list --ignored` behavior
