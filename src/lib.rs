@@ -43,17 +43,18 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-use rayon::prelude::*;
 use std::process;
+
+use rayon::prelude::*;
+
+pub use crate::args::{Arguments, ColorSetting, FormatSetting};
+use crate::printer::Printer;
 
 mod args;
 mod printer;
 
-pub use crate::args::{Arguments, ColorSetting, FormatSetting};
-
-
 /// Description of a single test.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Test<D = ()> {
     /// The name of the test. It's displayed in the output and used for all
     /// kinds of filtering.
@@ -126,21 +127,17 @@ pub enum Outcome {
     },
 }
 
-/// Event indicating that a given test has started running or has completed.
+/// Event indicating that a given test has completed.
 #[derive(Debug)]
-pub enum RunnerEvent<D> {
-    Started {
-        /// Name of the corresponding test.
-        name: String,
-        /// Kind of the corresponding test.
-        kind: String,
-    },
-    Completed {
-        /// Corresponding test.
-        test: Test<D>,
-        /// Outcome of having run the test.
-        outcome: Outcome,
-    },
+struct EventCompleted {
+    /// Name of the corresponding test.
+    name: String,
+    /// Kind of the corresponding test.
+    kind: String,
+    /// Was this test a bench test.
+    is_bench: bool,
+    /// Outcome of having run the test.
+    outcome: Outcome,
 }
 
 /// Contains information about the entire test run. Is returned by
@@ -150,7 +147,7 @@ pub enum RunnerEvent<D> {
 /// [`exit()`][Conclusion::exit] on the result of `run_tests` to exit the application
 /// with the correct exit code. But you can also store this value and inspect
 /// its data.
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 #[must_use]
 pub struct Conclusion {
     has_failed: bool,
@@ -209,12 +206,44 @@ impl Conclusion {
     }
 }
 
+// Run the given tests sequentially on the main thread.
+fn run_tests_main_thread<D: 'static + Send + Sync>(
+    args: &Arguments,
+    printer: &mut Printer,
+    tests: impl IntoIterator<Item=Test<D>>,
+    run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
+) -> Vec<EventCompleted> {
+    tests.into_iter().map(|test| {
+        printer.print_test(&test.name, &test.kind);
+
+        let is_ignored = (test.is_ignored && !args.ignored)
+            || (test.is_bench && args.test)
+            || (!test.is_bench && args.bench);
+
+        let outcome = if is_ignored {
+            Outcome::Ignored
+        } else {
+            // Run the given function
+            run_test(&test)
+        };
+
+        printer.print_single_outcome(&outcome);
+
+        EventCompleted {
+            name: test.name.to_string(),
+            kind: test.kind.to_string(),
+            is_bench: test.is_bench,
+            outcome,
+        }
+    }).collect()
+}
+
 /// Run the given tests in parallel in a thread pool.
 fn run_tests_threaded<D: 'static + Send + Sync>(
     args: &Arguments,
     tests: Vec<Test<D>>,
     run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
-) -> impl IntoIterator<Item = RunnerEvent<D>> {
+) -> crossbeam_channel::Receiver<EventCompleted> {
     // Construct a pool with as many threads as specified.
     let mut builder = rayon::ThreadPoolBuilder::new();
     if let Some(n) = args.num_threads {
@@ -233,12 +262,6 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     pool.spawn(move || {
         // This will split the workload across the thread pool automatically.
         tests.into_par_iter().for_each(|test| {
-            // It doesn't matter if the channel got closed so we can ignore the Result here.
-            let _ = send.send(RunnerEvent::Started {
-                name: test.name.clone(),
-                kind: test.kind.clone(),
-            });
-
             let is_ignored = (test.is_ignored && !args.ignored)
                 || (test.is_bench && args.test)
                 || (!test.is_bench && args.bench);
@@ -251,7 +274,12 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
             };
 
             // It doesn't matter if the channel got closed so we can ignore the Result here.
-            let _ = send.send(RunnerEvent::Completed { test, outcome });
+            let _ = send.send(EventCompleted {
+                name: test.name,
+                kind: test.kind,
+                is_bench: test.is_bench,
+                outcome,
+            });
         });
     });
 
@@ -343,42 +371,20 @@ pub fn run_tests<D: 'static + Send + Sync>(
     printer.print_title(tests.len() as u64);
 
     let mut failed_tests = Vec::new();
-    let mut num_ignored = 0;
-    let mut num_benches = 0;
-    let mut num_passed = 0;
+    let mut conclusion = Conclusion {
+        num_filtered_out,
+        ..Default::default()
+    };
 
-    // Execute all tests
-    for event in run_tests_threaded(args, tests, run_test) {
-        match event {
-            RunnerEvent::Started { name, kind } => {
-                // If tests are being run sequentially, we print the test name
-                // when it starts running and the result after it is done.
-                // Otherwise we print both at the same time.
-                if args.num_threads == Some(1) {
-                    // Print `test foo    ...`.
-                    printer.print_test(&name, &kind);
-                }
-            }
-            RunnerEvent::Completed { test, outcome } => {
-                if args.num_threads != Some(1) {
-                    // Print `test foo    ...` if it hasn't already been printed.
-                    printer.print_test(&test.name, &test.kind);
-                }
-                printer.print_single_outcome(&outcome);
-
-                if test.is_bench {
-                    num_benches += 1;
-                }
-
-                // Handle outcome
-                match outcome {
-                    Outcome::Passed => num_passed += 1,
-                    Outcome::Failed { msg } => failed_tests.push((test, msg)),
-                    Outcome::Ignored => num_ignored += 1,
-                    Outcome::Measured { .. } => {}
-                }
-            }
+    if args.num_threads == Some(1) {
+        for event in run_tests_main_thread(args, &mut printer, tests, run_test) {
+            collect_completion_info(&event, &mut conclusion, &mut failed_tests);
         }
+    } else {
+        for event in run_tests_threaded(args, tests, run_test) {
+            printer.print_test(&event.name, &event.kind);
+            collect_completion_info(&event, &mut conclusion, &mut failed_tests);
+        };
     }
 
     // Print failures if there were any
@@ -386,18 +392,25 @@ pub fn run_tests<D: 'static + Send + Sync>(
         printer.print_failures(&failed_tests);
     }
 
-    // Handle overall results
-    let num_failed = failed_tests.len() as u64;
-    let conclusion = Conclusion {
-        has_failed: num_failed != 0,
-        num_filtered_out,
-        num_passed,
-        num_failed,
-        num_ignored,
-        num_benches,
-    };
+    conclusion.num_failed = failed_tests.len() as u64;
 
     printer.print_summary(&conclusion);
 
     conclusion
+}
+
+fn collect_completion_info(
+    event: &EventCompleted,
+    conclusion: &mut Conclusion,
+    failures: &mut Vec<(String, Option<String>)>,
+) {
+    if event.is_bench { conclusion.num_benches += 1; }
+
+    // Handle outcome
+    match &event.outcome {
+        Outcome::Passed => conclusion.num_passed += 1,
+        Outcome::Failed { msg } => failures.push((event.name.clone(), msg.clone())),
+        Outcome::Ignored => conclusion.num_ignored += 1,
+        Outcome::Measured { .. } => {}
+    }
 }
