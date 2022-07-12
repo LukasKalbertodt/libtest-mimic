@@ -127,17 +127,21 @@ pub enum Outcome {
     },
 }
 
-/// Event indicating that a given test has completed.
+/// Event indicating that a given test has started running or has completed.
 #[derive(Debug)]
-struct EventCompleted {
-    /// Name of the corresponding test.
-    name: String,
-    /// Kind of the corresponding test.
-    kind: String,
-    /// Was this test a bench test.
-    is_bench: bool,
-    /// Outcome of having run the test.
-    outcome: Outcome,
+pub enum RunnerEvent<D> {
+    Started {
+        /// Name of the corresponding test.
+        name: String,
+        /// Kind of the corresponding test.
+        kind: String,
+    },
+    Completed {
+        /// Corresponding test.
+        test: Test<D>,
+        /// Outcome of having run the test.
+        outcome: Outcome,
+    },
 }
 
 /// Contains information about the entire test run. Is returned by
@@ -212,7 +216,7 @@ fn run_tests_main_thread<D: 'static + Send + Sync>(
     printer: &mut Printer,
     tests: impl IntoIterator<Item=Test<D>>,
     run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
-) -> Vec<EventCompleted> {
+) -> Vec<(Test<D>, Outcome)> {
     tests.into_iter().map(|test| {
         printer.print_test(&test.name, &test.kind);
 
@@ -228,13 +232,7 @@ fn run_tests_main_thread<D: 'static + Send + Sync>(
         };
 
         printer.print_single_outcome(&outcome);
-
-        EventCompleted {
-            name: test.name.to_string(),
-            kind: test.kind.to_string(),
-            is_bench: test.is_bench,
-            outcome,
-        }
+        (test, outcome)
     }).collect()
 }
 
@@ -243,7 +241,7 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     args: &Arguments,
     tests: Vec<Test<D>>,
     run_test: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
-) -> crossbeam_channel::Receiver<EventCompleted> {
+) -> impl IntoIterator<Item=RunnerEvent<D>> {
     // Construct a pool with as many threads as specified.
     let mut builder = rayon::ThreadPoolBuilder::new();
     if let Some(n) = args.num_threads {
@@ -274,12 +272,7 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
             };
 
             // It doesn't matter if the channel got closed so we can ignore the Result here.
-            let _ = send.send(EventCompleted {
-                name: test.name,
-                kind: test.kind,
-                is_bench: test.is_bench,
-                outcome,
-            });
+            let _ = send.send(RunnerEvent::Completed { test, outcome });
         });
     });
 
@@ -377,13 +370,19 @@ pub fn run_tests<D: 'static + Send + Sync>(
     };
 
     if args.num_threads == Some(1) {
-        for event in run_tests_main_thread(args, &mut printer, tests, run_test) {
-            collect_completion_info(&event, &mut conclusion, &mut failed_tests);
+        for (test, outcome) in &run_tests_main_thread(args, &mut printer, tests, run_test) {
+            collect_completion_info(test, outcome, &mut conclusion, &mut failed_tests);
         }
     } else {
         for event in run_tests_threaded(args, tests, run_test) {
-            printer.print_test(&event.name, &event.kind);
-            collect_completion_info(&event, &mut conclusion, &mut failed_tests);
+            if let RunnerEvent::Completed { test, outcome } = event {
+                if args.num_threads != Some(1) {
+                    // Print `test foo    ...` if it hasn't already been printed.
+                    printer.print_test(&test.name, &test.kind);
+                }
+                printer.print_single_outcome(&outcome);
+                collect_completion_info(&test, &outcome, &mut conclusion, &mut failed_tests);
+            }
         };
     }
 
@@ -399,17 +398,18 @@ pub fn run_tests<D: 'static + Send + Sync>(
     conclusion
 }
 
-fn collect_completion_info(
-    event: &EventCompleted,
+fn collect_completion_info<D: 'static + Send + Sync>(
+    test: &Test<D>,
+    outcome: &Outcome,
     conclusion: &mut Conclusion,
     failures: &mut Vec<(String, Option<String>)>,
 ) {
-    if event.is_bench { conclusion.num_benches += 1; }
+    if test.is_bench { conclusion.num_benches += 1; }
 
     // Handle outcome
-    match &event.outcome {
+    match outcome {
         Outcome::Passed => conclusion.num_passed += 1,
-        Outcome::Failed { msg } => failures.push((event.name.clone(), msg.clone())),
+        Outcome::Failed { msg } => failures.push((test.name.clone(), msg.clone())),
         Outcome::Ignored => conclusion.num_ignored += 1,
         Outcome::Measured { .. } => {}
     }
