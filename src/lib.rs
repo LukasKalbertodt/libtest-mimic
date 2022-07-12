@@ -377,8 +377,8 @@ pub fn run_tests<D: 'static + Send + Sync>(
 
     // Execute all tests
     if args.num_threads == Some(1) {
-        for (test, outcome) in &run_tests_main_thread(args, &mut printer, tests, run_test) {
-            collect_completion_info(test, outcome, &mut conclusion, &mut failed_tests);
+        for (test, outcome) in run_tests_main_thread(args, &mut printer, tests, run_test) {
+            collect_completion_info(test, &outcome, &mut conclusion, &mut failed_tests);
         }
     } else {
         for event in run_tests_threaded(args, tests, run_test) {
@@ -388,7 +388,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
                     printer.print_test(&test.name, &test.kind);
                 }
                 printer.print_single_outcome(&outcome);
-                collect_completion_info(&test, &outcome, &mut conclusion, &mut failed_tests);
+                collect_completion_info(test, &outcome, &mut conclusion, &mut failed_tests);
             }
         };
     }
