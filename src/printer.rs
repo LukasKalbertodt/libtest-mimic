@@ -218,14 +218,14 @@ impl Printer {
 
     /// Prints a list of failed tests with their messages. This is only called
     /// if there were any failures.
-    pub(crate) fn print_failures(&mut self, fails: &[(String, Option<String>)]) {
+    pub(crate) fn print_failures<D>(&mut self, fails: &[(Test<D>, Option<String>)]) {
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
         writeln!(self.out).unwrap();
 
         // Print messages of all tests
-        for (name, msg) in fails {
-            writeln!(self.out, "---- {} ----", name).unwrap();
+        for (test, msg) in fails {
+            writeln!(self.out, "---- {} ----", test.name).unwrap();
             if let Some(msg) = msg {
                 writeln!(self.out, "{}", msg).unwrap();
             }
@@ -235,8 +235,8 @@ impl Printer {
         // Print summary list of failed tests
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
-        for (name, _) in fails {
-            writeln!(self.out, "    {}", name).unwrap();
+        for (test, _) in fails {
+            writeln!(self.out, "    {}", test.name).unwrap();
         }
     }
 

@@ -43,18 +43,18 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-use std::process;
-
 use rayon::prelude::*;
-
-pub use crate::args::{Arguments, ColorSetting, FormatSetting};
-use crate::printer::Printer;
+use std::process;
 
 mod args;
 mod printer;
 
+pub use crate::args::{Arguments, ColorSetting, FormatSetting};
+use crate::printer::Printer;
+
+
 /// Description of a single test.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Test<D = ()> {
     /// The name of the test. It's displayed in the output and used for all
     /// kinds of filtering.
@@ -260,6 +260,12 @@ fn run_tests_threaded<D: 'static + Send + Sync>(
     pool.spawn(move || {
         // This will split the workload across the thread pool automatically.
         tests.into_par_iter().for_each(|test| {
+            // It doesn't matter if the channel got closed so we can ignore the Result here.
+            let _ = send.send(RunnerEvent::Started {
+                name: test.name.clone(),
+                kind: test.kind.clone(),
+            });
+
             let is_ignored = (test.is_ignored && !args.ignored)
                 || (test.is_bench && args.test)
                 || (!test.is_bench && args.bench);
@@ -369,6 +375,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
         ..Default::default()
     };
 
+    // Execute all tests
     if args.num_threads == Some(1) {
         for (test, outcome) in &run_tests_main_thread(args, &mut printer, tests, run_test) {
             collect_completion_info(test, outcome, &mut conclusion, &mut failed_tests);
@@ -398,18 +405,18 @@ pub fn run_tests<D: 'static + Send + Sync>(
     conclusion
 }
 
-fn collect_completion_info<D: 'static + Send + Sync>(
-    test: &Test<D>,
+fn collect_completion_info<'a, D: 'static + Send + Sync>(
+    test: Test<D>,
     outcome: &Outcome,
     conclusion: &mut Conclusion,
-    failures: &mut Vec<(String, Option<String>)>,
+    failures: &mut Vec<(Test<D>, Option<String>)>,
 ) {
     if test.is_bench { conclusion.num_benches += 1; }
 
     // Handle outcome
     match outcome {
         Outcome::Passed => conclusion.num_passed += 1,
-        Outcome::Failed { msg } => failures.push((test.name.clone(), msg.clone())),
+        Outcome::Failed { msg } => failures.push((test, msg.clone())),
         Outcome::Ignored => conclusion.num_ignored += 1,
         Outcome::Measured { .. } => {}
     }
