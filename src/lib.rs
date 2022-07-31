@@ -194,6 +194,28 @@ impl Arguments {
             || (test.is_bench && self.test)
             || (!test.is_bench && self.bench)
     }
+
+    fn is_filtered_out<D>(&self, test: &Test<D>) -> bool {
+        // If a filter was specified, apply this
+        if let Some(filter) = &self.filter_string {
+            match self.exact {
+                true if &test.name != filter => return true,
+                false if !test.name.contains(filter) => return true,
+                _ => {}
+            };
+        }
+
+        // If any skip pattern were specified, test for all patterns.
+        for skip_filter in &self.skip {
+            match self.exact {
+                true if &test.name == skip_filter => return true,
+                false if test.name.contains(skip_filter) => return true,
+                _ => {}
+            }
+        }
+
+        false
+    }
 }
 
 /// Runs all given tests with the given test runner.
@@ -233,28 +255,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
     // Apply filtering
     if args.filter_string.is_some() || !args.skip.is_empty() {
         let len_before = tests.len() as u64;
-        tests.retain(|t| {
-            // If a filter was specified, apply this
-            if let Some(filter) = &args.filter_string {
-                match args.exact {
-                    true if &t.name != filter => return false,
-                    false if !t.name.contains(filter) => return false,
-                    _ => {}
-                };
-            }
-
-            // If any skip pattern were specified, test for all patterns.
-            for skip_filter in &args.skip {
-                match args.exact {
-                    true if &t.name == skip_filter => return false,
-                    false if t.name.contains(skip_filter) => return false,
-                    _ => {}
-                }
-            }
-
-            true
-        });
-
+        tests.retain(|test| !args.is_filtered_out(test));
         conclusion.num_filtered_out = len_before - tests.len() as u64;
     }
     let tests = tests;
