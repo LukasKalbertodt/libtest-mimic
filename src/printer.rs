@@ -6,7 +6,7 @@
 //! - `format` (and `quiet`)
 //! - `logfile`
 
-use std::fs::File;
+use std::{fs::File, time::Duration};
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
@@ -157,7 +157,7 @@ impl Printer {
     }
 
     /// Prints the summary line after all tests have been executed.
-    pub(crate) fn print_summary(&mut self, conclusion: &Conclusion) {
+    pub(crate) fn print_summary(&mut self, conclusion: &Conclusion, execution_time: Duration) {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
                 let outcome = if conclusion.has_failed() {
@@ -171,12 +171,14 @@ impl Printer {
                 self.print_outcome_pretty(&outcome);
                 writeln!(
                     self.out,
-                    ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
+                    ". {} passed; {} failed; {} ignored; {} measured; \
+                        {} filtered out; finished in {:.2}s",
                     conclusion.num_passed,
                     conclusion.num_failed,
                     conclusion.num_ignored,
                     conclusion.num_benches,
                     conclusion.num_filtered_out,
+                    execution_time.as_secs_f64()
                 ).unwrap();
                 writeln!(self.out).unwrap();
             }

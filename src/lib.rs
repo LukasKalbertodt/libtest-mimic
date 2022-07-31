@@ -34,7 +34,7 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-use std::{process, sync::mpsc, fmt};
+use std::{process, sync::mpsc, fmt, time::Instant};
 
 mod args;
 mod printer;
@@ -323,6 +323,7 @@ impl Arguments {
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
 pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
+    let start_instant = Instant::now();
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering
@@ -414,7 +415,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
         printer.print_failures(&failed_tests);
     }
 
-    printer.print_summary(&conclusion);
+    printer.print_summary(&conclusion, start_instant.elapsed());
 
     conclusion
 }
