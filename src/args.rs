@@ -11,8 +11,8 @@ use clap::Parser;
 /// The CLI is very similar to the one from the native test harness. However,
 /// there are minor differences:
 /// - Most notable: the `--help` message is slightly different. This comes from
-///   the fact that this crate (right now) uses structopt (which uses `clap`)
-///   while the original `libtest` uses `docopt`.
+///   the fact that this crate (right now) uses clap while the original
+///   `libtest` uses `docopt`.
 /// - `--skip` only accepts one value per occurence (but can occur multiple
 ///   times). This solves ambiguity with the `filter` value at the very end.
 ///   Consider "`--skip foo bar`": should this be parsed as `skip: vec!["foo",
@@ -26,8 +26,8 @@ use clap::Parser;
 /// are all automatically used. Check [`run`][crate::run] for information on
 /// which arguments are automatically used and require special care.
 #[derive(Parser, Debug, Clone)]
-#[structopt(
-    help_template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
+#[clap(
+    help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
     disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
@@ -40,11 +40,11 @@ use clap::Parser;
 pub struct Arguments {
     // ============== FLAGS ===================================================
     /// Determines if ignored tests should be run.
-    #[structopt(long = "--ignored", help = "Run ignored tests")]
+    #[clap(long = "--ignored", help = "Run ignored tests")]
     pub ignored: bool,
 
     /// Run tests, but not benchmarks.
-    #[structopt(
+    #[clap(
         long = "--test",
         conflicts_with = "bench",
         help = "Run tests and not benchmarks",
@@ -52,23 +52,23 @@ pub struct Arguments {
     pub test: bool,
 
     /// Run benchmarks, but not tests.
-    #[structopt(long = "--bench", help = "Run benchmarks instead of tests")]
+    #[clap(long = "--bench", help = "Run benchmarks instead of tests")]
     pub bench: bool,
 
     /// Only list all tests and benchmarks.
-    #[structopt(long = "--list", help = "List all tests and benchmarks")]
+    #[clap(long = "--list", help = "List all tests and benchmarks")]
     pub list: bool,
 
     /// If set, stdout/stderr are not captured during the test but are instead
     /// printed directly.
-    #[structopt(
+    #[clap(
         long = "--nocapture",
         help = "don't capture stdout/stderr of each task, allow printing directly",
     )]
     pub nocapture: bool,
 
     /// If set, filters are matched exactly rather than by substring.
-    #[structopt(
+    #[clap(
         long = "--exact",
         help = "Exactly match filters rather than by substring",
     )]
@@ -79,7 +79,7 @@ pub struct Arguments {
     ///
     /// This is an alias for `--format=terse`. If this is set, `format` is
     /// `None`.
-    #[structopt(
+    #[clap(
         short = 'q',
         long = "--quiet",
         conflicts_with = "format",
@@ -89,7 +89,7 @@ pub struct Arguments {
 
     // ============== OPTIONS =================================================
     /// Number of threads used for parallel testing.
-    #[structopt(
+    #[clap(
         long = "--test-threads",
         help = "Number of threads used for running tests in parallel",
     )]
@@ -97,7 +97,7 @@ pub struct Arguments {
 
     /// Path of the logfile. If specified, everything will be written into the
     /// file instead of stdout.
-    #[structopt(
+    #[clap(
         long = "--logfile",
         value_name = "PATH",
         help = "Write logs to the specified file instead of stdout",
@@ -106,7 +106,7 @@ pub struct Arguments {
 
     /// A list of filters. Tests whose names contain parts of any of these
     /// filters are skipped.
-    #[structopt(
+    #[clap(
         long = "--skip",
         value_name = "FILTER",
         number_of_values = 1,
@@ -115,7 +115,7 @@ pub struct Arguments {
     pub skip: Vec<String>,
 
     /// Specifies whether or not to color the output.
-    #[structopt(
+    #[clap(
         long = "--color",
         possible_values = &["auto", "always", "never"],
         value_name = "auto|always|never",
@@ -127,7 +127,7 @@ pub struct Arguments {
     pub color: Option<ColorSetting>,
 
     /// Specifies the format of the output.
-    #[structopt(
+    #[clap(
         long = "--format",
         possible_values = &["pretty", "terse", "json"],
         value_name = "pretty|terse|json",
@@ -140,7 +140,7 @@ pub struct Arguments {
 
     // ============== POSITIONAL VALUES =======================================
     /// Filter string. Only tests which contain this string are run.
-    #[structopt(
+    #[clap(
         name = "FILTER",
         help = "The FILTER string is tested against the name of all tests, and only those tests \
                 whose names contain the filter are run.",
