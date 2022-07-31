@@ -128,23 +128,6 @@ pub enum Outcome {
     },
 }
 
-/// Event indicating that a given test has started running or has completed.
-#[derive(Debug)]
-pub enum RunnerEvent<D> {
-    Started {
-        /// Name of the corresponding test.
-        name: String,
-        /// Kind of the corresponding test.
-        kind: String,
-    },
-    Completed {
-        /// Corresponding test.
-        test: Test<D>,
-        /// Outcome of having run the test.
-        outcome: Outcome,
-    },
-}
-
 /// Contains information about the entire test run. Is returned by
 /// [`run_tests`].
 ///
