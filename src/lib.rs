@@ -10,32 +10,23 @@
 //!
 //! # Example
 //!
-//! ```
+//! ```no_run
 //! extern crate libtest_mimic;
 //!
-//! use libtest_mimic::{Arguments, Test, Outcome, run_tests};
+//! use libtest_mimic::{Arguments, Test, run_tests};
 //!
 //!
 //! // Parse command line arguments
 //! let args = Arguments::from_args();
 //!
-//! // Create a list of tests (in this case: three dummy tests)
+//! // Create a list of tests (in this case: two dummy tests)
 //! let tests = vec![
-//!     Test::test("toph"),
-//!     Test::test("sokka"),
-//!     Test {
-//!         name: "long_computation".into(),
-//!         kind: "".into(),
-//!         is_ignored: true,
-//!         is_bench: false,
-//!         data: (),
-//!     },
+//!     Test::test("check_toph", move || { /* The test */ Ok(()) }),
+//!     Test::test("check_sokka", move || { /* The test */ Err("Woops".into()) }),
 //! ];
 //!
-//! // Run all tests and exit the application appropriatly (in this case, the
-//! // test runner is a dummy runner which does nothing and says that all tests
-//! // passed).
-//! run_tests(&args, tests, |test| Outcome::Passed).exit();
+//! // Run all tests and exit the application appropriatly.
+//! run_tests(&args, tests).exit();
 //! ```
 //!
 //! For more examples, see [`examples/` in the repository][repo-examples].
@@ -43,7 +34,7 @@
 //!
 //! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
 
-use std::{process, sync::mpsc};
+use std::{process, sync::mpsc, fmt};
 
 mod args;
 mod printer;
@@ -54,78 +45,164 @@ use threadpool::ThreadPool;
 pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 
 
-/// Description of a single test.
-#[derive(Clone, Debug)]
-pub struct Test<D = ()> {
-    /// The name of the test. It's displayed in the output and used for all
-    /// kinds of filtering.
-    pub name: String,
 
-    /// Optional string to describe the kind of test. If this string is not
+/// A single test or benchmark.
+///
+/// Yes, `libtest` often counts benchmarks as "tests", which is a bit confusing.
+/// The main parts of this definition is `name`, which is printed and used for
+/// filtering, and `runner`, which is called when the test is executed to
+/// determine its outcome.
+pub struct Test {
+    runner: Box<dyn FnOnce() -> Outcome + Send>,
+    info: TestInfo,
+}
+
+impl Test {
+    /// Creates a (non-benchmark) test with the given name and runner.
+    pub fn test(
+        name: impl Into<String>,
+        runner: impl FnOnce() -> Result<(), Failed> + Send + 'static,
+    ) -> Self {
+        Self {
+            runner: Box::new(move || match runner() {
+                Ok(()) => Outcome::Passed,
+                Err(failed) => Outcome::Failed(failed),
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: false,
+            },
+        }
+    }
+
+    /// Creates a benchmark with the given name and runner.
+    pub fn bench(
+        name: impl Into<String>,
+        runner: impl FnOnce() -> Result<Measurement, Failed> + Send + 'static,
+    ) -> Self {
+        Self {
+            runner: Box::new(move || match runner() {
+                Ok(measurement) => Outcome::Measured(measurement),
+                Err(failed) => Outcome::Failed(failed),
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: true,
+            },
+        }
+    }
+
+    /// Sets the "kind" of this test/benchmark. If this string is not
     /// empty, it is printed in brackets before the test name (e.g.
-    /// `test [my-kind] test_name`).
-    pub kind: String,
-
-    /// Whether or not this test should be ignored. If the `--ignored` flag is
-    /// set, ignored tests are executed, too.
-    pub is_ignored: bool,
-
-    /// Whether this test is actually a benchmark.
-    pub is_bench: bool,
-
-    /// Custom data. This field is not used by this library and can instead be
-    /// used to store arbitrary data per test.
-    pub data: D,
-}
-
-impl<D: Default> Test<D> {
-    /// Creates a test with the given name, an empty `kind` and default data.
-    /// The test is not ignored and is not a benchmark.
-    pub fn test(name: impl Into<String>) -> Self {
+    /// `test [my-kind] test_name`). (Default: *empty*)
+    pub fn with_kind(self, kind: impl Into<String>) -> Self {
         Self {
-            name: name.into(),
-            kind: String::new(),
-            is_ignored: false,
-            is_bench: false,
-            data: D::default(),
+            info: TestInfo {
+                kind: kind.into(),
+                ..self.info
+            },
+            ..self
         }
     }
 
-    /// Creates a benchmark with the given name, an empty `kind` and default
-    /// data. The benchmark is not ignored.
-    pub fn bench(name: impl Into<String>) -> Self {
+    /// Sets whether or not this test is considered "ignored". (Default: `false`)
+    ///
+    /// With the built-in test suite, you can annotate `#[ignore]` on tests to
+    /// not execute them by default (for example because they take a long time
+    /// or require a special environment). If the `--ignored` flag is set,
+    /// ignored tests are executed, too.
+    pub fn with_ignored_flag(self, is_ignored: bool) -> Self {
         Self {
-            name: name.into(),
-            kind: String::new(),
-            is_ignored: false,
-            is_bench: true,
-            data: D::default(),
+            info: TestInfo {
+                is_ignored,
+                ..self.info
+            },
+            ..self
         }
     }
 }
 
-/// The outcome of performing a test.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Outcome {
+impl fmt::Debug for Test {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct OpaqueRunner;
+        impl fmt::Debug for OpaqueRunner {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("<runner>")
+            }
+        }
+
+        f.debug_struct("Test")
+            .field("runner", &OpaqueRunner)
+            .field("name", &self.info.name)
+            .field("kind", &self.info.kind)
+            .field("is_ignored", &self.info.is_ignored)
+            .field("is_bench", &self.info.is_bench)
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+struct TestInfo {
+    name: String,
+    kind: String,
+    is_ignored: bool,
+    is_bench: bool,
+}
+
+/// Output of a benchmark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Measurement {
+    /// Average time in ns.
+    pub avg: u64,
+
+    /// Variance in ns.
+    pub variance: u64,
+}
+
+/// Indicates that a test/benchmark has failed. Optionally carries a message.
+#[derive(Debug, Clone)]
+pub struct Failed {
+    msg: Option<String>,
+}
+
+impl Failed {
+    pub fn without_message() -> Self {
+        Self { msg: None }
+    }
+
+    pub fn message(&self) -> Option<&str> {
+        self.msg.as_deref()
+    }
+}
+
+impl<M: std::fmt::Display> From<M> for Failed {
+    fn from(msg: M) -> Self {
+        Self {
+            msg: Some(msg.to_string())
+        }
+    }
+}
+
+
+
+/// The outcome of performing a test/benchmark.
+#[derive(Debug, Clone)]
+enum Outcome {
     /// The test passed.
     Passed,
 
-    /// The test or benchmark failed (either compiler error or panicked).
-    Failed {
-        /// A message that is shown after all tests have been run.
-        msg: Option<String>,
-    },
+    /// The test or benchmark failed.
+    Failed(Failed),
 
     /// The test or benchmark was ignored.
     Ignored,
 
     /// The benchmark was successfully run.
-    Measured {
-        /// Average time in ns.
-        avg: u64,
-        /// Variance in ns.
-        variance: u64,
-    },
+    Measured(Measurement),
 }
 
 /// Contains information about the entire test run. Is returned by
@@ -189,18 +266,20 @@ impl Conclusion {
 
 impl Arguments {
     /// Returns `true` if the given test should be ignored.
-    fn is_ignored<D>(&self, test: &Test<D>) -> bool {
-        (test.is_ignored && !self.ignored)
-            || (test.is_bench && self.test)
-            || (!test.is_bench && self.bench)
+    fn is_ignored(&self, test: &Test) -> bool {
+        (test.info.is_ignored && !self.ignored)
+            || (test.info.is_bench && self.test)
+            || (!test.info.is_bench && self.bench)
     }
 
-    fn is_filtered_out<D>(&self, test: &Test<D>) -> bool {
+    fn is_filtered_out(&self, test: &Test) -> bool {
+        let test_name = &test.info.name;
+
         // If a filter was specified, apply this
         if let Some(filter) = &self.filter_string {
             match self.exact {
-                true if &test.name != filter => return true,
-                false if !test.name.contains(filter) => return true,
+                true if test_name != filter => return true,
+                false if !test_name.contains(filter) => return true,
                 _ => {}
             };
         }
@@ -208,8 +287,8 @@ impl Arguments {
         // If any skip pattern were specified, test for all patterns.
         for skip_filter in &self.skip {
             match self.exact {
-                true if &test.name == skip_filter => return true,
-                false if test.name.contains(skip_filter) => return true,
+                true if test_name == skip_filter => return true,
+                false if test_name.contains(skip_filter) => return true,
                 _ => {}
             }
         }
@@ -245,11 +324,7 @@ impl Arguments {
 /// The returned value contains a couple of useful information. See the
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
-pub fn run_tests<D: 'static + Send + Sync>(
-    args: &Arguments,
-    mut tests: Vec<Test<D>>,
-    runner: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
-) -> Conclusion {
+pub fn run_tests(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering
@@ -273,7 +348,7 @@ pub fn run_tests<D: 'static + Send + Sync>(
     printer.print_title(tests.len() as u64);
 
     let mut failed_tests = Vec::new();
-    let mut handle_outcome = |outcome: Outcome, test: Test<D>, printer: &mut Printer| {
+    let mut handle_outcome = |outcome: Outcome, test: TestInfo, printer: &mut Printer| {
         printer.print_single_outcome(&outcome);
 
         if test.is_bench {
@@ -283,12 +358,12 @@ pub fn run_tests<D: 'static + Send + Sync>(
         // Handle outcome
         match outcome {
             Outcome::Passed => conclusion.num_passed += 1,
-            Outcome::Failed { msg } => {
-                failed_tests.push((test, msg));
+            Outcome::Failed(failed) => {
+                failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
             },
             Outcome::Ignored => conclusion.num_ignored += 1,
-            Outcome::Measured { .. } => {}
+            Outcome::Measured(_) => {}
         }
     };
 
@@ -298,43 +373,41 @@ pub fn run_tests<D: 'static + Send + Sync>(
         for test in tests {
             // Print `test foo    ...`, run the test, then print the outcome in
             // the same line.
-            printer.print_test(&test.name, &test.kind);
+            printer.print_test(&test.info);
             let outcome = if args.is_ignored(&test) {
                 Outcome::Ignored
             } else {
-                runner(&test)
+                (test.runner)()
             };
-            handle_outcome(outcome, test, &mut printer);
+            handle_outcome(outcome, test.info, &mut printer);
         }
     } else {
         // Run test in thread pool.
         let pool = ThreadPool::default();
         let (sender, receiver) = mpsc::channel();
 
-        let runner = std::sync::Arc::new(runner);
         let num_tests = tests.len();
         for test in tests {
             if args.is_ignored(&test) {
-                sender.send((Outcome::Ignored, test)).unwrap();
+                sender.send((Outcome::Ignored, test.info)).unwrap();
             } else {
-                let runner = runner.clone();
                 let sender = sender.clone();
                 pool.execute(move || {
                     // It's fine to ignore the result of sending. If the
                     // receiver has hung up, everything will wind down soon
                     // anyway.
-                    let outcome = runner(&test);
-                    let _ = sender.send((outcome, test));
+                    let outcome = (test.runner)();
+                    let _ = sender.send((outcome, test.info));
                 });
             }
         }
 
-        for (outcome, test) in receiver.iter().take(num_tests) {
+        for (outcome, test_info) in receiver.iter().take(num_tests) {
             // In multithreaded mode, we do only print the start of the line
             // after the test ran, as otherwise it would lead to terribly
             // interleaved output.
-            printer.print_test(&test.name, &test.kind);
-            handle_outcome(outcome, test, &mut printer);
+            printer.print_test(&test_info);
+            handle_outcome(outcome, test_info, &mut printer);
         }
     }
 

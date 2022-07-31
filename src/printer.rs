@@ -10,7 +10,10 @@ use std::fs::File;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
-use crate::{Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test};
+use crate::{
+    Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Test, Failed,
+    Measurement, TestInfo,
+};
 
 pub(crate) struct Printer {
     out: Box<dyn WriteColor>,
@@ -22,7 +25,7 @@ pub(crate) struct Printer {
 impl Printer {
     /// Creates a new printer configured by the given arguments (`format`,
     /// `quiet`, `color` and `logfile` options).
-    pub(crate) fn new<D>(args: &Arguments, tests: &[Test<D>]) -> Self {
+    pub(crate) fn new(args: &Arguments, tests: &[Test]) -> Self {
         let color_arg = args.color.unwrap_or(ColorSetting::Auto);
 
         // Determine target of all output
@@ -56,17 +59,17 @@ impl Printer {
         // a cheap way that works in most cases. Usually, these names are
         // ASCII.
         let name_width = tests.iter()
-            .map(|test| test.name.chars().count())
+            .map(|test| test.info.name.chars().count())
             .max()
             .unwrap_or(0);
 
         let kind_width = tests.iter()
             .map(|test| {
-                if test.kind.is_empty() {
+                if test.info.kind.is_empty() {
                     0
                 } else {
                     // The two braces [] and one space
-                    test.kind.chars().count() + 3
+                    test.info.kind.chars().count() + 3
                 }
             })
             .max()
@@ -95,7 +98,8 @@ impl Printer {
 
     /// Prints the text announcing the test (e.g. "test foo::bar ... "). Prints
     /// nothing in terse mode.
-    pub(crate) fn print_test(&mut self, name: &str, kind: &str) {
+    pub(crate) fn print_test(&mut self, info: &TestInfo) {
+        let TestInfo { name, kind, .. } = info;
         match self.format {
             FormatSetting::Pretty => {
                 let kind = if kind.is_empty() {
@@ -157,7 +161,7 @@ impl Printer {
         match self.format {
             FormatSetting::Pretty | FormatSetting::Terse => {
                 let outcome = if conclusion.has_failed() {
-                    Outcome::Failed { msg: None }
+                    Outcome::Failed(Failed { msg: None })
                 } else {
                     Outcome::Passed
                 };
@@ -181,12 +185,12 @@ impl Printer {
     }
 
     /// Prints a list of all tests. Used if `--list` is set.
-    pub(crate) fn print_list<D>(&mut self, tests: &[Test<D>], ignored: bool) {
+    pub(crate) fn print_list(&mut self, tests: &[Test], ignored: bool) {
         Self::write_list(tests, ignored, &mut self.out).unwrap();
     }
 
-    pub(crate) fn write_list<D>(
-        tests: &[Test<D>],
+    pub(crate) fn write_list(
+        tests: &[Test],
         ignored: bool,
         mut out: impl std::io::Write,
     ) -> std::io::Result<()> {
@@ -194,22 +198,22 @@ impl Printer {
             // libtest prints out:
             // * all tests without `--ignored`
             // * just the ignored tests with `--ignored`
-            if ignored && !test.is_ignored {
+            if ignored && !test.info.is_ignored {
                 continue;
             }
 
-            let kind = if test.kind.is_empty() {
+            let kind = if test.info.kind.is_empty() {
                 format!("")
             } else {
-                format!("[{}] ", test.kind)
+                format!("[{}] ", test.info.kind)
             };
 
             writeln!(
                 out,
                 "{}{}: {}",
                 kind,
-                test.name,
-                if test.is_bench { "bench" } else { "test" },
+                test.info.name,
+                if test.info.is_bench { "bench" } else { "test" },
             )?;
         }
 
@@ -218,14 +222,14 @@ impl Printer {
 
     /// Prints a list of failed tests with their messages. This is only called
     /// if there were any failures.
-    pub(crate) fn print_failures<D>(&mut self, fails: &[(Test<D>, Option<String>)]) {
+    pub(crate) fn print_failures(&mut self, fails: &[(TestInfo, Option<String>)]) {
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
         writeln!(self.out).unwrap();
 
         // Print messages of all tests
-        for (test, msg) in fails {
-            writeln!(self.out, "---- {} ----", test.name).unwrap();
+        for (test_info, msg) in fails {
+            writeln!(self.out, "---- {} ----", test_info.name).unwrap();
             if let Some(msg) = msg {
                 writeln!(self.out, "{}", msg).unwrap();
             }
@@ -235,8 +239,8 @@ impl Printer {
         // Print summary list of failed tests
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
-        for (test, _) in fails {
-            writeln!(self.out, "    {}", test.name).unwrap();
+        for (test_info, _) in fails {
+            writeln!(self.out, "    {}", test_info.name).unwrap();
         }
     }
 
@@ -253,7 +257,7 @@ impl Printer {
         write!(self.out, "{}", s).unwrap();
         self.out.reset().unwrap();
 
-        if let Outcome::Measured { avg, variance } = outcome {
+        if let Outcome::Measured(Measurement { avg, variance }) = outcome {
             write!(
                 self.out,
                 ": {:>11} ns/iter (+/- {})",
@@ -295,35 +299,20 @@ mod tests {
 
     #[test]
     fn list_ignored() {
+        let dummy_measurement = Measurement {
+            avg: 0,
+            variance: 0,
+        };
+
         let tests = vec![
-            Test {
-                name: "foo".into(),
-                kind: "".into(),
-                is_ignored: false,
-                is_bench: false,
-                data: (),
-            },
-            Test {
-                name: "bar".into(),
-                kind: "bar-test-kind".into(),
-                is_ignored: true,
-                is_bench: false,
-                data: (),
-            },
-            Test {
-                name: "baz".into(),
-                kind: "baz-test-kind".into(),
-                is_ignored: false,
-                is_bench: true,
-                data: (),
-            },
-            Test {
-                name: "quux".into(),
-                kind: "".into(),
-                is_ignored: true,
-                is_bench: true,
-                data: (),
-            },
+            Test::test("foo", || Ok(())),
+            Test::test("bar", || Ok(()))
+                .with_kind("bar-test-kind")
+                .with_ignored_flag(true),
+            Test::bench("baz", move || Ok(dummy_measurement))
+                .with_kind("baz-test-kind"),
+            Test::bench("quux", move || Ok(dummy_measurement))
+                .with_ignored_flag(true),
         ];
 
         {

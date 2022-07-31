@@ -23,8 +23,9 @@ use clap::Parser;
 ///   make sense, but it's allowed in `libtest` for some reason.
 ///
 /// **Note**: just because all CLI args can be parsed, doesn't mean that they
-/// are all automatically used. Check [`run_tests`][::run_tests] for information on which
-/// arguments are automatically used and require special care.
+/// are all automatically used. Check [`run_tests`][crate::run_tests] for
+/// information on which arguments are automatically used and require special
+/// care.
 #[derive(Parser, Debug, Clone)]
 #[structopt(
     help_template = "USAGE: [FLAGS] [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",

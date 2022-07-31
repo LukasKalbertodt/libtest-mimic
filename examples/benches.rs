@@ -1,37 +1,17 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Test, Outcome, run_tests};
+use libtest_mimic::{Arguments, Test, run_tests, Measurement};
 
 
 fn main() {
     let args = Arguments::from_args();
 
     let tests = vec![
-        Test {
-            name: "foo::bar".into(),
-            kind: "".into(),
-            is_ignored: false,
-            is_bench: true,
-            data: (1274, 23),
-        },
-        Test {
-            name: "zhu_li::do_the_thing".into(),
-            kind: "".into(),
-            is_ignored: false,
-            is_bench: true,
-            data: (73, 6),
-        },
-        Test {
-            name: "ferris::run".into(),
-            kind: "".into(),
-            is_ignored: false,
-            is_bench: true,
-            data: (19082, 99),
-        },
+        Test::bench("foo::bar", || Ok(Measurement { avg: 1274, variance: 23 })),
+        Test::bench("ferris::run", || Ok(Measurement { avg: 19082, variance: 99 })),
+        Test::bench("zhu_li::do_the_thing", || Ok(Measurement { avg: 73, variance: 6 }))
+            .with_ignored_flag(true),
     ];
 
-    run_tests(&args, tests, |test| {
-        let (avg, variance) = test.data;
-        Outcome::Measured { avg, variance }
-    }).exit();
+    run_tests(&args, tests).exit();
 }
