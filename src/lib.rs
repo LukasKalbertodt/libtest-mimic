@@ -275,7 +275,7 @@ impl Arguments {
         let test_name = &test.info.name;
 
         // If a filter was specified, apply this
-        if let Some(filter) = &self.filter_string {
+        if let Some(filter) = &self.filter {
             match self.exact {
                 true if test_name != filter => return true,
                 false if !test_name.contains(filter) => return true,
@@ -327,7 +327,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering
-    if args.filter_string.is_some() || !args.skip.is_empty() {
+    if args.filter.is_some() || !args.skip.is_empty() {
         let len_before = tests.len() as u64;
         tests.retain(|test| !args.is_filtered_out(test));
         conclusion.num_filtered_out = len_before - tests.len() as u64;

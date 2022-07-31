@@ -132,7 +132,7 @@ pub struct Arguments {
         help = "The FILTER string is tested against the name of all tests, and only those tests \
                 whose names contain the filter are run.",
     )]
-    pub filter_string: Option<String>,
+    pub filter: Option<String>,
 }
 
 impl Arguments {

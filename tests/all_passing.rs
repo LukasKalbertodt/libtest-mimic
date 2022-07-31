@@ -65,7 +65,7 @@ fn single_threaded_exact() {
 #[test]
 fn filter_one() {
     let args = Arguments {
-        filter_string: Some("foo".into()),
+        filter: Some("foo".into()),
         ..Default::default()
     };
     let (c, out) = common::do_run(args, tests());
@@ -88,7 +88,7 @@ fn filter_one() {
 #[test]
 fn filter_two() {
     let args = Arguments {
-        filter_string: Some("ba".into()),
+        filter: Some("ba".into()),
         ..Default::default()
     };
     let (c, out) = common::do_run(args, tests());
