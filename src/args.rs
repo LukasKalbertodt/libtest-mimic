@@ -31,11 +31,7 @@ use clap::Parser;
     disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
-        tests (set it to 1).\n\
-        \n\
-        All tests have their standard output and standard error captured by default. \n\
-        This can be overridden with the --nocapture flag or setting RUST_TEST_NOCAPTURE \n\
-        environment variable to a value other than \"0\". Logging is not captured by default.",
+        tests (set it to 1).",
 )]
 pub struct Arguments {
     // ============== FLAGS ===================================================
@@ -58,14 +54,6 @@ pub struct Arguments {
     /// Only list all tests and benchmarks.
     #[clap(long = "--list", help = "List all tests and benchmarks")]
     pub list: bool,
-
-    /// If set, stdout/stderr are not captured during the test but are instead
-    /// printed directly.
-    #[clap(
-        long = "--nocapture",
-        help = "don't capture stdout/stderr of each task, allow printing directly",
-    )]
-    pub nocapture: bool,
 
     /// If set, filters are matched exactly rather than by substring.
     #[clap(
@@ -129,12 +117,11 @@ pub struct Arguments {
     /// Specifies the format of the output.
     #[clap(
         long = "--format",
-        possible_values = &["pretty", "terse", "json"],
+        possible_values = &["pretty", "terse"],
         value_name = "pretty|terse|json",
         help = "Configure formatting of output: \n\
             - pretty = Print verbose output\n\
-            - terse = Display one character per test\n\
-            - json = Output a json document\n",
+            - terse = Display one character per test\n",
     )]
     pub format: Option<FormatSetting>,
 
@@ -209,9 +196,6 @@ pub enum FormatSetting {
 
     /// One character per test. Usefull for test suites with many tests.
     Terse,
-
-    /// Output as JSON.
-    Json,
 }
 
 impl Default for FormatSetting {
@@ -226,7 +210,6 @@ impl FromStr for FormatSetting {
         match s {
             "pretty" => Ok(FormatSetting::Pretty),
             "terse" => Ok(FormatSetting::Terse),
-            "json" => Ok(FormatSetting::Json),
             _ => Err("foo"),
         }
     }

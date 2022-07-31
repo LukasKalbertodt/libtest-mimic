@@ -92,7 +92,6 @@ impl Printer {
                 writeln!(self.out).unwrap();
                 writeln!(self.out, "running {} test{}", num_tests, plural_s).unwrap();
             }
-            FormatSetting::Json => unimplemented!(),
         }
     }
 
@@ -122,7 +121,6 @@ impl Printer {
                 // In terse mode, nothing is printed before the job. Only
                 // `print_single_outcome` prints one character.
             }
-            FormatSetting::Json => unimplemented!(),
         }
     }
 
@@ -152,7 +150,6 @@ impl Printer {
                 write!(self.out, "{}", c).unwrap();
                 self.out.reset().unwrap();
             }
-            FormatSetting::Json => unimplemented!(),
         }
     }
 
@@ -182,7 +179,6 @@ impl Printer {
                 ).unwrap();
                 writeln!(self.out).unwrap();
             }
-            FormatSetting::Json => unimplemented!(),
         }
     }
 
