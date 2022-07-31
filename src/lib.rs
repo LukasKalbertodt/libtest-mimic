@@ -6,14 +6,14 @@
 //! and used. With that plumbing work out of the way, your test runner can
 //! concentrate on the actual testing.
 //!
-//! The central function of this crate is [`run_tests`].
+//! The central function of this crate is [`run`].
 //!
 //! # Example
 //!
 //! ```no_run
 //! extern crate libtest_mimic;
 //!
-//! use libtest_mimic::{Arguments, Test, run_tests};
+//! use libtest_mimic::{Arguments, Test};
 //!
 //!
 //! // Parse command line arguments
@@ -26,7 +26,7 @@
 //! ];
 //!
 //! // Run all tests and exit the application appropriatly.
-//! run_tests(&args, tests).exit();
+//! libtest_mimic::run(&args, tests).exit();
 //! ```
 //!
 //! For more examples, see [`examples/` in the repository][repo-examples].
@@ -205,11 +205,10 @@ enum Outcome {
     Measured(Measurement),
 }
 
-/// Contains information about the entire test run. Is returned by
-/// [`run_tests`].
+/// Contains information about the entire test run. Is returned by[`run`].
 ///
 /// This type is marked as `#[must_use]`. Usually, you just call
-/// [`exit()`][Conclusion::exit] on the result of `run_tests` to exit the application
+/// [`exit()`][Conclusion::exit] on the result of `run` to exit the application
 /// with the correct exit code. But you can also store this value and inspect
 /// its data.
 #[derive(Clone, Debug)]
@@ -316,15 +315,14 @@ impl Arguments {
 ///
 /// Currently, the following CLI arg is ignored, but is planned to be used
 /// in the future:
-/// - `--format=json`. If specified, this function will
-///   panic.
+/// - `--format=json`. If specified, this function will panic.
 ///
 /// All other flags and options are used properly.
 ///
 /// The returned value contains a couple of useful information. See the
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
-pub fn run_tests(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
+pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering

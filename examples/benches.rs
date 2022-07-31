@@ -1,6 +1,6 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Test, run_tests, Measurement};
+use libtest_mimic::{Arguments, Test, Measurement};
 
 
 fn main() {
@@ -13,5 +13,5 @@ fn main() {
             .with_ignored_flag(true),
     ];
 
-    run_tests(&args, tests).exit();
+    libtest_mimic::run(&args, tests).exit();
 }

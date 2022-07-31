@@ -1,6 +1,6 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Test, run_tests, Failed};
+use libtest_mimic::{Arguments, Test, Failed};
 
 use std::{
     env,
@@ -14,7 +14,7 @@ use std::{
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Arguments::from_args();
     let tests = collect_tests()?;
-    run_tests(&args, tests).exit();
+    libtest_mimic::run(&args, tests).exit();
 }
 
 /// Creates one test for each `.rs` file in the current directory or

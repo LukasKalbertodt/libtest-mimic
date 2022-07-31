@@ -1,7 +1,7 @@
 extern crate libtest_mimic;
 
 use std::{thread, time};
-use libtest_mimic::{Arguments, Test, run_tests, Failed};
+use libtest_mimic::{Arguments, Test, Failed};
 
 
 fn main() {
@@ -15,7 +15,7 @@ fn main() {
         Test::test("check_katara", check_katara),
     ];
 
-    run_tests(&args, tests).exit();
+    libtest_mimic::run(&args, tests).exit();
 }
 
 

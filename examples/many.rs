@@ -1,6 +1,6 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Test, run_tests, Failed};
+use libtest_mimic::{Arguments, Test, Failed};
 
 
 fn main() {
@@ -16,7 +16,7 @@ fn main() {
         .collect::<Vec<_>>();
 
     // Run tests
-    run_tests(&args, tests).exit();
+    libtest_mimic::run(&args, tests).exit();
 }
 
 
