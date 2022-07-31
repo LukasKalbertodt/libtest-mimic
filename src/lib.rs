@@ -212,7 +212,7 @@ enum Outcome {
 /// with the correct exit code. But you can also store this value and inspect
 /// its data.
 #[derive(Clone, Debug)]
-#[must_use]
+#[must_use = "Call `exit()` or `exit_if_failed()` to set the correct return code"]
 pub struct Conclusion {
     /// Number of tests and benchmarks that were filtered out (either by the
     /// filter-in pattern or by `--skip` arguments).
