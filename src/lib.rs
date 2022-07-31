@@ -138,12 +138,21 @@ pub enum Outcome {
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct Conclusion {
-    has_failed: bool,
-    num_filtered_out: u64,
-    num_passed: u64,
-    num_failed: u64,
-    num_ignored: u64,
-    num_benches: u64,
+    /// Number of tests and benchmarks that were filtered out (either by the
+    /// filter-in pattern or by `--skip` arguments).
+    pub num_filtered_out: u64,
+
+    /// Number of passed tests.
+    pub num_passed: u64,
+
+    /// Number of failed tests and benchmarks.
+    pub num_failed: u64,
+
+    /// Number of ignored tests and benchmarks.
+    pub num_ignored: u64,
+
+    /// Number of benchmarks that successfully ran.
+    pub num_benches: u64,
 }
 
 impl Conclusion {
@@ -157,44 +166,29 @@ impl Conclusion {
     /// Exits the application with error code 101 if there were any failures.
     /// Otherwise, returns normally.
     pub fn exit_if_failed(&self) {
-        if self.has_failed {
+        if self.has_failed() {
             process::exit(101)
         }
     }
 
-    /// Returns whether or not there have been any failures.
+    /// Returns whether there have been any failures.
     pub fn has_failed(&self) -> bool {
-        self.has_failed
+        self.num_failed > 0
     }
 
-    /// Returns how many tests were filtered out (either by the filter-in
-    /// pattern or by `--skip` arguments).
-    pub fn num_filtered_out(&self) -> u64 {
-        self.num_filtered_out
-    }
-
-    /// Returns how many tests passed.
-    pub fn num_passed(&self) -> u64 {
-        self.num_passed
-    }
-
-    /// Returns how many tests failed.
-    pub fn num_failed(&self) -> u64 {
-        self.num_failed
-    }
-
-    /// Returns how many tests were ignored.
-    pub fn num_ignored(&self) -> u64 {
-        self.num_ignored
-    }
-
-    /// Returns how many benchmark were successfully run.
-    pub fn num_benches(&self) -> u64 {
-        self.num_benches
+    fn empty() -> Self {
+        Self {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_benches: 0,
+        }
     }
 }
 
 impl Arguments {
+    /// Returns `true` if the given test should be ignored.
     fn is_ignored<D>(&self, test: &Test<D>) -> bool {
         (test.is_ignored && !self.ignored)
             || (test.is_bench && self.test)
@@ -231,13 +225,14 @@ impl Arguments {
 /// specified, a list is printed and a dummy `Conclusion` is returned.
 pub fn run_tests<D: 'static + Send + Sync>(
     args: &Arguments,
-    tests: Vec<Test<D>>,
+    mut tests: Vec<Test<D>>,
     runner: impl Fn(&Test<D>) -> Outcome + 'static + Send + Sync,
 ) -> Conclusion {
+    let mut conclusion = Conclusion::empty();
+
     // Apply filtering
-    let (tests, num_filtered_out) = if args.filter_string.is_some() || !args.skip.is_empty() {
+    if args.filter_string.is_some() || !args.skip.is_empty() {
         let len_before = tests.len() as u64;
-        let mut tests = tests;
         tests.retain(|t| {
             // If a filter was specified, apply this
             if let Some(filter) = &args.filter_string {
@@ -260,11 +255,9 @@ pub fn run_tests<D: 'static + Send + Sync>(
             true
         });
 
-        let num_filtered_out = len_before - tests.len() as u64;
-        (tests, num_filtered_out)
-    } else {
-        (tests, 0)
-    };
+        conclusion.num_filtered_out = len_before - tests.len() as u64;
+    }
+    let tests = tests;
 
     // Create printer which is used for all output.
     let mut printer = printer::Printer::new(args, &tests);
@@ -272,36 +265,28 @@ pub fn run_tests<D: 'static + Send + Sync>(
     // If `--list` is specified, just print the list and return.
     if args.list {
         printer.print_list(&tests, args.ignored);
-        return Conclusion {
-            has_failed: false,
-            num_filtered_out: 0,
-            num_passed: 0,
-            num_failed: 0,
-            num_ignored: 0,
-            num_benches: 0,
-        };
+        return Conclusion::empty();
     }
 
     // Print number of tests
     printer.print_title(tests.len() as u64);
 
     let mut failed_tests = Vec::new();
-    let mut num_ignored = 0;
-    let mut num_benches = 0;
-    let mut num_passed = 0;
-
     let mut handle_outcome = |outcome: Outcome, test: Test<D>, printer: &mut Printer| {
         printer.print_single_outcome(&outcome);
 
         if test.is_bench {
-            num_benches += 1;
+            conclusion.num_benches += 1;
         }
 
         // Handle outcome
         match outcome {
-            Outcome::Passed => num_passed += 1,
-            Outcome::Failed { msg } => failed_tests.push((test, msg)),
-            Outcome::Ignored => num_ignored += 1,
+            Outcome::Passed => conclusion.num_passed += 1,
+            Outcome::Failed { msg } => {
+                failed_tests.push((test, msg));
+                conclusion.num_failed += 1;
+            },
+            Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured { .. } => {}
         }
     };
@@ -352,21 +337,10 @@ pub fn run_tests<D: 'static + Send + Sync>(
         }
     }
 
-    // Print failures if there were any
+    // Print failures if there were any, and the final summary.
     if !failed_tests.is_empty() {
         printer.print_failures(&failed_tests);
     }
-
-    // Handle overall results
-    let num_failed = failed_tests.len() as u64;
-    let conclusion = Conclusion {
-        has_failed: num_failed != 0,
-        num_filtered_out,
-        num_passed,
-        num_failed,
-        num_ignored,
-        num_benches,
-    };
 
     printer.print_summary(&conclusion);
 

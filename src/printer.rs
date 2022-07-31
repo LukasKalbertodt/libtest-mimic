@@ -168,11 +168,11 @@ impl Printer {
                 writeln!(
                     self.out,
                     ". {} passed; {} failed; {} ignored; {} measured; {} filtered out",
-                    conclusion.num_passed(),
-                    conclusion.num_failed(),
-                    conclusion.num_ignored(),
-                    conclusion.num_benches(),
-                    conclusion.num_filtered_out(),
+                    conclusion.num_passed,
+                    conclusion.num_failed,
+                    conclusion.num_ignored,
+                    conclusion.num_benches,
+                    conclusion.num_filtered_out,
                 ).unwrap();
                 writeln!(self.out).unwrap();
             }
