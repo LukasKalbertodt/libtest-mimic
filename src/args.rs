@@ -25,7 +25,7 @@ use clap::Parser;
 /// **Note**: just because all CLI args can be parsed, doesn't mean that they
 /// are all automatically used. Check [`run`][crate::run] for information on
 /// which arguments are automatically used and require special care.
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[clap(
     help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
     disable_version_flag = true,

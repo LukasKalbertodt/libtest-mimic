@@ -211,7 +211,7 @@ enum Outcome {
 /// [`exit()`][Conclusion::exit] on the result of `run` to exit the application
 /// with the correct exit code. But you can also store this value and inspect
 /// its data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use = "Call `exit()` or `exit_if_failed()` to set the correct return code"]
 pub struct Conclusion {
     /// Number of tests and benchmarks that were filtered out (either by the
