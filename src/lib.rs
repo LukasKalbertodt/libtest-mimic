@@ -296,7 +296,7 @@ impl Arguments {
     }
 }
 
-/// Runs all given tests with the given test runner.
+/// Runs all given tests.
 ///
 /// This is the central function of this crate. It provides the framework for
 /// the testing harness. It does all the printing and house keeping.
