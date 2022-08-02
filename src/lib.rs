@@ -228,7 +228,7 @@ pub struct Conclusion {
     pub num_ignored: u64,
 
     /// Number of benchmarks that successfully ran.
-    pub num_benches: u64,
+    pub num_measured: u64,
 }
 
 impl Conclusion {
@@ -258,7 +258,7 @@ impl Conclusion {
             num_passed: 0,
             num_failed: 0,
             num_ignored: 0,
-            num_benches: 0,
+            num_measured: 0,
         }
     }
 }
@@ -350,10 +350,6 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     let mut handle_outcome = |outcome: Outcome, test: TestInfo, printer: &mut Printer| {
         printer.print_single_outcome(&outcome);
 
-        if test.is_bench {
-            conclusion.num_benches += 1;
-        }
-
         // Handle outcome
         match outcome {
             Outcome::Passed => conclusion.num_passed += 1,
@@ -362,7 +358,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
                 conclusion.num_failed += 1;
             },
             Outcome::Ignored => conclusion.num_ignored += 1,
-            Outcome::Measured(_) => {}
+            Outcome::Measured(_) => conclusion.num_measured += 1,
         }
     };
 

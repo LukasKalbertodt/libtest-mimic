@@ -22,7 +22,7 @@ fn normal() {
         num_passed: 3,
         num_failed: 0,
         num_ignored: 0,
-        num_benches: 0,
+        num_measured: 0,
     });
     assert_reordered_log(
         &out,
@@ -49,7 +49,7 @@ fn single_threaded_exact() {
         num_passed: 3,
         num_failed: 0,
         num_ignored: 0,
-        num_benches: 0,
+        num_measured: 0,
     });
     assert_log!(&out, "
         running 3 tests
@@ -74,7 +74,7 @@ fn filter_one() {
         num_passed: 1,
         num_failed: 0,
         num_ignored: 0,
-        num_benches: 0,
+        num_measured: 0,
     });
     assert_reordered_log(
         &out,
@@ -97,7 +97,7 @@ fn filter_two() {
         num_passed: 2,
         num_failed: 0,
         num_ignored: 0,
-        num_benches: 0,
+        num_measured: 0,
     });
     assert_reordered_log(
         &out,

@@ -173,7 +173,7 @@ impl Printer {
                     conclusion.num_passed,
                     conclusion.num_failed,
                     conclusion.num_ignored,
-                    conclusion.num_benches,
+                    conclusion.num_measured,
                     conclusion.num_filtered_out,
                     execution_time.as_secs_f64()
                 ).unwrap();
