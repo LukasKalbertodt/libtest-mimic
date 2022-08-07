@@ -322,3 +322,98 @@ fn filter_o_test_ignored() {
         ",
     );
 }
+
+#[test]
+fn normal_ignored() {
+    check(args(["--ignored"]), tests, 16,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 8,
+            num_failed: 8,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "
+            test          cat    ... ok
+            test          dog    ... FAILED
+            test [apple]  fox    ... ok
+            test [apple]  bunny  ... FAILED
+            test          frog   ... ok
+            test          owl    ... FAILED
+            test [banana] fly    ... ok
+            test [banana] bear   ... FAILED
+            test          red    ... ok
+            test          blue   ... FAILED
+            test [kiwi]   yellow ... ok
+            test [kiwi]   green  ... FAILED
+            test          purple ... ok
+            test          cyan   ... FAILED
+            test [banana] orange ... ok
+            test [banana] pink   ... FAILED
+
+            failures:
+
+            ---- dog ----
+            was not a good boy
+
+            ---- bunny ----
+            jumped too high
+
+            ---- owl ----
+            broke neck
+
+            ---- bear ----
+            no honey
+
+            ---- blue ----
+            sky fell down
+
+            ---- green ----
+            was poisoned
+
+            ---- cyan ----
+            not creative enough
+
+            ---- pink ----
+            bad
+
+
+            failures:
+                dog
+                bunny
+                owl
+                bear
+                blue
+                green
+                cyan
+                pink
+        ",
+    );
+}
+
+#[test]
+fn lots_of_flags() {
+    check(args(["--ignored", "--skip", "g", "--test", "o"]), tests, 3,
+        Conclusion {
+            num_filtered_out: 13,
+            num_passed: 1,
+            num_failed: 1,
+            num_ignored: 1,
+            num_measured: 0,
+        },
+        "
+            test [apple] fox    ... ok
+            test         owl    ... FAILED
+            test [kiwi]  yellow ... ignored
+
+            failures:
+
+            ---- owl ----
+            broke neck
+
+
+            failures:
+                owl
+        ",
+    );
+}
