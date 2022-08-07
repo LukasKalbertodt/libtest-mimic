@@ -297,19 +297,19 @@ mod tests {
 
     #[test]
     fn list_ignored() {
-        let dummy_measurement = Measurement {
+        let dummy_measurement = Some(Measurement {
             avg: 0,
             variance: 0,
-        };
+        });
 
         let tests = vec![
             Test::test("foo", || Ok(())),
             Test::test("bar", || Ok(()))
                 .with_kind("bar-test-kind")
                 .with_ignored_flag(true),
-            Test::bench("baz", move || Ok(dummy_measurement))
+            Test::bench("baz", move |_| Ok(dummy_measurement))
                 .with_kind("baz-test-kind"),
-            Test::bench("quux", move || Ok(dummy_measurement))
+            Test::bench("quux", move |_| Ok(dummy_measurement))
                 .with_ignored_flag(true),
         ];
 

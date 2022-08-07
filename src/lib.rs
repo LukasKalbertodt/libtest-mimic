@@ -53,18 +53,18 @@ pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 /// filtering, and `runner`, which is called when the test is executed to
 /// determine its outcome.
 pub struct Test {
-    runner: Box<dyn FnOnce() -> Outcome + Send>,
+    runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
     info: TestInfo,
 }
 
 impl Test {
     /// Creates a (non-benchmark) test with the given name and runner.
-    pub fn test(
-        name: impl Into<String>,
-        runner: impl FnOnce() -> Result<(), Failed> + Send + 'static,
-    ) -> Self {
+    pub fn test<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce() -> Result<(), Failed> + Send + 'static,
+    {
         Self {
-            runner: Box::new(move || match runner() {
+            runner: Box::new(move |_test_mode| match runner() {
                 Ok(()) => Outcome::Passed,
                 Err(failed) => Outcome::Failed(failed),
             }),
@@ -78,14 +78,28 @@ impl Test {
     }
 
     /// Creates a benchmark with the given name and runner.
-    pub fn bench(
-        name: impl Into<String>,
-        runner: impl FnOnce() -> Result<Measurement, Failed> + Send + 'static,
-    ) -> Self {
+    ///
+    /// If the runner's parameter `test_mode` is `true`, the runner function
+    /// should run all code just once, without measuring, just to make sure it
+    /// does not panic. If the parameter is `false`, it should perform the
+    /// actual benchmark. If `test_mode` is `true` you may return `Ok
+    /// (None)`, but if it's `false`, you have to return a `Measurement`, or
+    /// else the benchmark is considered a failure.
+    ///
+    /// `test_mod` is `true` if neither `--bench` nor `--test` are set, and
+    /// `false` when `--bench` is set. If `--test` is set, benchmarks are not
+    /// ran at all, and both flags cannot be set at the same time.
+    pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + Send + 'static,
+    {
         Self {
-            runner: Box::new(move || match runner() {
-                Ok(measurement) => Outcome::Measured(measurement),
+            runner: Box::new(move |test_mode| match runner(test_mode) {
                 Err(failed) => Outcome::Failed(failed),
+                Ok(_) if test_mode => Outcome::Passed,
+                Ok(Some(measurement)) => Outcome::Measured(measurement),
+                Ok(None)
+                    => Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into()),
             }),
             info: TestInfo {
                 name: name.into(),
@@ -363,6 +377,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     };
 
     // Execute all tests.
+    let test_mode = !args.bench;
     if args.num_threads == Some(1) {
         // Run test sequentially in main thread
         for test in tests {
@@ -372,7 +387,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
             let outcome = if args.is_ignored(&test) {
                 Outcome::Ignored
             } else {
-                (test.runner)()
+                (test.runner)(test_mode)
             };
             handle_outcome(outcome, test.info, &mut printer);
         }
@@ -391,7 +406,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
                     // It's fine to ignore the result of sending. If the
                     // receiver has hung up, everything will wind down soon
                     // anyway.
-                    let outcome = (test.runner)();
+                    let outcome = (test.runner)(test_mode);
                     let _ = sender.send((outcome, test.info));
                 });
             }
