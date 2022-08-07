@@ -241,3 +241,84 @@ fn list_with_filter() {
         num_measured: 0,
      });
 }
+
+#[test]
+fn filter_c() {
+    check(args(["c"]), tests, 2,
+        Conclusion {
+            num_filtered_out: 14,
+            num_passed: 1,
+            num_failed: 0,
+            num_ignored: 1,
+            num_measured: 0,
+        },
+        "
+            test cat  ... ok
+            test cyan ... ignored
+        ",
+    );
+}
+
+#[test]
+fn filter_o_test() {
+    check(args(["--test", "o"]), tests, 6,
+        Conclusion {
+            num_filtered_out: 10,
+            num_passed: 1,
+            num_failed: 1,
+            num_ignored: 4,
+            num_measured: 0,
+        },
+        "
+            test          dog    ... FAILED
+            test [apple]  fox    ... ok
+            test          frog   ... ignored
+            test          owl    ... ignored
+            test [kiwi]   yellow ... ignored
+            test [banana] orange ... ignored
+
+            failures:
+
+            ---- dog ----
+            was not a good boy
+
+
+            failures:
+                dog
+        ",
+    );
+}
+
+#[test]
+fn filter_o_test_ignored() {
+    check(args(["--test", "--ignored", "o"]), tests, 6,
+        Conclusion {
+            num_filtered_out: 10,
+            num_passed: 2,
+            num_failed: 2,
+            num_ignored: 2,
+            num_measured: 0,
+        },
+        "
+            test          dog    ... FAILED
+            test [apple]  fox    ... ok
+            test          frog   ... ok
+            test          owl    ... FAILED
+            test [kiwi]   yellow ... ignored
+            test [banana] orange ... ignored
+
+            failures:
+
+            ---- dog ----
+            was not a good boy
+
+            ---- owl ----
+            broke neck
+
+
+            failures:
+                dog
+                owl
+        ",
+    );
+}

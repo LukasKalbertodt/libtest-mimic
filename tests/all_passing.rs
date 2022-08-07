@@ -9,7 +9,7 @@ fn tests() -> Vec<Test> {
     vec![
         Test::test("foo", || Ok(())),
         Test::test("bar", || Ok(())),
-        Test::test("baz", || Ok(())),
+        Test::test("barro", || Ok(())),
     ]
 }
 
@@ -24,9 +24,9 @@ fn normal() {
             num_measured: 0,
         },
         "
-            test foo ... ok
-            test bar ... ok
-            test baz ... ok
+            test foo   ... ok
+            test bar   ... ok
+            test barro ... ok
         "
     );
 }
@@ -47,7 +47,7 @@ fn filter_one() {
 
 #[test]
 fn filter_two() {
-    check(args(["ba"]), tests, 2,
+    check(args(["bar"]), tests, 2,
         Conclusion {
             num_filtered_out: 1,
             num_passed: 2,
@@ -56,8 +56,86 @@ fn filter_two() {
             num_measured: 0,
         },
         "
-            test bar ... ok
-            test baz ... ok
+            test bar   ... ok
+            test barro ... ok
         ",
+    );
+}
+
+
+#[test]
+fn filter_exact() {
+    check(args(["bar", "--exact"]), tests, 1,
+        Conclusion {
+            num_filtered_out: 2,
+            num_passed: 1,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "test bar ... ok",
+    );
+}
+
+#[test]
+fn filter_two_and_skip() {
+    check(args(["--skip", "barro", "bar"]), tests, 1,
+        Conclusion {
+            num_filtered_out: 2,
+            num_passed: 1,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "test bar ... ok",
+    );
+}
+
+#[test]
+fn skip_nothing() {
+    check(args(["--skip", "peter"]), tests, 3,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 3,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "
+            test foo   ... ok
+            test bar   ... ok
+            test barro ... ok
+        "
+    );
+}
+
+#[test]
+fn skip_two() {
+    check(args(["--skip", "bar"]), tests, 1,
+        Conclusion {
+            num_filtered_out: 2,
+            num_passed: 1,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "test foo ... ok"
+    );
+}
+
+#[test]
+fn skip_exact() {
+    check(args(["--exact", "--skip", "bar"]), tests, 2,
+        Conclusion {
+            num_filtered_out: 1,
+            num_passed: 2,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "
+            test foo   ... ok
+            test barro ... ok
+        "
     );
 }
