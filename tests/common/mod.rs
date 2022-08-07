@@ -1,10 +1,16 @@
-use std::{path::Path, iter::repeat_with, collections::HashSet};
+use std::{path::Path, iter::repeat_with, collections::HashMap};
 use pretty_assertions::assert_eq;
 
 use libtest_mimic::{run, Arguments, Conclusion, Test};
 
 
 const TEMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
+
+pub fn args<const N: usize>(args: [&str; N]) -> Arguments {
+    let mut v = vec!["<dummy-executable>"];
+    v.extend(args);
+    Arguments::from_iter(v)
+}
 
 pub fn do_run(mut args: Arguments, tests: Vec<Test>) -> (Conclusion, String) {
     // Create path to temporary file.
@@ -51,22 +57,75 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
 
 
     assert_eq!(first_line, &format!("running {} test{}", num, if num == 1 { "" } else { "s" }));
-    assert_eq!(last_line, tail);
+    assert!(last_line.contains(tail));
 
-    let mut actual_lines = middle.lines().map(|l| l.trim()).collect::<HashSet<_>>();
-    for expected_line in expected_lines {
-        if !actual_lines.remove(expected_line.trim()) {
-            panic!("expected line '{expected_line}' not in log");
+    let mut actual_lines = HashMap::new();
+    for line in middle.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        *actual_lines.entry(line).or_insert(0) += 1;
+    }
+
+    for expected in expected_lines.iter().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        match actual_lines.get_mut(expected) {
+            None | Some(0) => panic!("expected line \"{expected}\" not in log"),
+            Some(num) => *num -= 1,
         }
+    }
+
+    actual_lines.retain(|_, v| *v != 0);
+    if !actual_lines.is_empty() {
+        panic!("Leftover output in log: {actual_lines:#?}");
     }
 }
 
 /// Like `assert_eq`, but cleans the expected string (removes indendation).
+#[macro_export]
 macro_rules! assert_log {
     ($actual:expr, $expected:expr) => {
         let actual = $actual;
         let expected = crate::common::clean_expected_log($expected);
 
-        pretty_assertions::assert_eq!(actual.trim(), expected.trim());
+        assert_eq!(actual.trim(), expected.trim());
     };
+}
+
+pub fn check(
+    mut args: Arguments,
+    mut tests: impl FnMut() -> Vec<Test>,
+    num_running_tests: u64,
+    expected_conclusion: Conclusion,
+    expected_output: &str,
+) {
+    // Run in single threaded mode
+    args.num_threads = Some(1);
+    let (c, out) = do_run(args.clone(), tests());
+    let expected = crate::common::clean_expected_log(expected_output);
+    let actual = {
+        let lines = out.trim().lines().skip(1).collect::<Vec<_>>();
+        lines[..lines.len() - 1].join("\n")
+    };
+    assert_eq!(actual.trim(), expected.trim());
+    assert_eq!(c, expected_conclusion);
+
+    // Run in multithreaded mode.
+    let (c, out) = do_run(args, tests());
+    assert_reordered_log(
+        &out,
+        num_running_tests,
+        &expected_output.lines().collect::<Vec<_>>(),
+        &conclusion_to_output(&c),
+    );
+    assert_eq!(c, expected_conclusion);
+}
+
+fn conclusion_to_output(c: &Conclusion) -> String {
+    let Conclusion { num_filtered_out, num_passed, num_failed, num_ignored, num_measured } = *c;
+    format!(
+        "test result: {}. {} passed; {} failed; {} ignored; {} measured; {} filtered out;",
+        if num_failed > 0 { "FAILED" } else { "ok" },
+        num_passed,
+        num_failed,
+        num_ignored,
+        num_measured,
+        num_filtered_out,
+    )
 }

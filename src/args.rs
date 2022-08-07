@@ -145,7 +145,8 @@ impl Arguments {
         Parser::parse()
     }
 
-    /// Like `from_args()`, but operates on an explicit iterator and not the global arguments.
+    /// Like `from_args()`, but operates on an explicit iterator and not the
+    /// global arguments. Note that the first element is the executable name!
     pub fn from_iter<I>(iter: I) -> Self
     where
         Self: Sized,
