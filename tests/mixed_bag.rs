@@ -1,3 +1,4 @@
+use pretty_assertions::assert_eq;
 use libtest_mimic::{Test, Conclusion, Measurement};
 use crate::common::{args, check};
 
@@ -169,4 +170,74 @@ fn bench_mode() {
                 green
         ",
     );
+}
+
+#[test]
+fn list() {
+    let (c, out) = common::do_run(args(["--list"]), tests());
+    assert_log!(out, "
+        cat: test
+        dog: test
+        [apple] fox: test
+        [apple] bunny: test
+        frog: test
+        owl: test
+        [banana] fly: test
+        [banana] bear: test
+        red: bench
+        blue: bench
+        [kiwi] yellow: bench
+        [kiwi] green: bench
+        purple: bench
+        cyan: bench
+        [banana] orange: bench
+        [banana] pink: bench
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
+}
+
+#[test]
+fn list_ignored() {
+    let (c, out) = common::do_run(args(["--list", "--ignored"]), tests());
+    assert_log!(out, "
+        frog: test
+        owl: test
+        [banana] fly: test
+        [banana] bear: test
+        purple: bench
+        cyan: bench
+        [banana] orange: bench
+        [banana] pink: bench
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
+}
+
+#[test]
+fn list_with_filter() {
+    let (c, out) = common::do_run(args(["--list", "a"]), tests());
+    assert_log!(out, "
+        cat: test
+        [banana] bear: test
+        cyan: bench
+        [banana] orange: bench
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
 }
