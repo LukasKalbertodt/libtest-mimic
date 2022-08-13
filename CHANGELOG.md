@@ -6,6 +6,44 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-08-13
+
+Most parts of this library have been rewritten and the API has changed a lot.
+You might be better of just reading the new docs instead of this change log.
+I do think the new API is better in many regards.
+Apart from an improved API, changes that motivated the rewrite are marked with ⭐.
+
+## Changed
+- **Breaking**: bump MSRV to 1.58
+- **Breaking**: Rename `Test` to `Trial`
+- **Breaking**: Rename `run_tests` to `run`
+- ⭐ **Breaking**: Make every `Trial` have a runner function instead of `data` + a
+  global runner function. Thus, the third parameter of `run` is no more. I think
+  this model is more intuitive.
+- **Breaking**: Add `Trial::{test, bench}` constructor functions, use builder
+  pattern, and make fields private.
+- **Breaking**: rename `Args::num_threads` to `test_threads`
+- **Breaking**: make fields of `Conclusion` public and remove getter methods
+- **Breaking**: remove `RunnerEvent`. This should not have been public.
+- ⭐ Tests are now run in main thread when `--test-threads=1` is specified
+- ⭐ Reduce number of indirect dependencies considerably
+- Fix `rust-version` field in `Cargo.toml` (thanks @hellow554)
+- Fix `--ignored` behavior
+- Fix some CLI error messages
+
+## Added
+- ⭐Panics in test runners are caught and treated as failure
+- ⭐ Lots of integration tests (should make any future development of this library way easier)
+- Add `must_use` message for `Conclusion`
+- Print total execution time at the end of the run
+- Allow benchmarks to run in test mode
+- `--include-ignored`
+
+## Removed
+- **Breaking**: remove unsupported CLI options. They were ignored anyway, but
+  the CLI would accept them.
+
+
 ## [0.4.1] - 2022-06-07
 
 - Add `rust = "1.56"` to `Cargo.toml`, stating the existing MSRV.
@@ -34,7 +72,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.2.0...v0.3.0
