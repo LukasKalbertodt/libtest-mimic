@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.1] - 2022-08-13
+### Added
+- `Trial::{name, kind, has_ignored_flag, is_test, is_bench}` getters
+
 ## [0.5.0] - 2022-08-13
 
 Most parts of this library have been rewritten and the API has changed a lot.
@@ -13,7 +17,7 @@ You might be better of just reading the new docs instead of this change log.
 I do think the new API is better in many regards.
 Apart from an improved API, changes that motivated the rewrite are marked with ‚≠ê.
 
-## Changed
+### Changed
 - **Breaking**: bump MSRV to 1.58
 - **Breaking**: Rename `Test` to `Trial`
 - **Breaking**: Rename `run_tests` to `run`
@@ -31,7 +35,7 @@ Apart from an improved API, changes that motivated the rewrite are marked with ‚
 - Fix `--ignored` behavior
 - Fix some CLI error messages
 
-## Added
+### Added
 - ‚≠êPanics in test runners are caught and treated as failure
 - ‚≠ê Lots of integration tests (should make any future development of this library way easier)
 - Add `must_use` message for `Conclusion`
@@ -39,7 +43,7 @@ Apart from an improved API, changes that motivated the rewrite are marked with ‚
 - Allow benchmarks to run in test mode
 - `--include-ignored`
 
-## Removed
+### Removed
 - **Breaking**: remove unsupported CLI options. They were ignored anyway, but
   the CLI would accept them.
 
@@ -72,7 +76,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with ‚
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.3.0...v0.4.0
