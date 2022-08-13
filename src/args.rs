@@ -188,7 +188,7 @@ impl FromStr for ColorSetting {
             "auto" => Ok(ColorSetting::Auto),
             "always" => Ok(ColorSetting::Always),
             "never" => Ok(ColorSetting::Never),
-            _ => Err("foo"),
+            _ => Err("invalid color setting"),
         }
     }
 }
@@ -215,7 +215,7 @@ impl FromStr for FormatSetting {
         match s {
             "pretty" => Ok(FormatSetting::Pretty),
             "terse" => Ok(FormatSetting::Terse),
-            _ => Err("foo"),
+            _ => Err("invalid output format"),
         }
     }
 }
