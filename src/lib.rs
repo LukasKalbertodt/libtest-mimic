@@ -6,6 +6,9 @@
 //! that plumbing work out of the way, your test runner can focus on the actual
 //! testing.
 //!
+//! For a small real world example, see [`examples/tidy.rs`][1].
+//!
+//! [1]: https://github.com/LukasKalbertodt/libtest-mimic/blob/master/examples/tidy.rs
 //!
 //! # Usage
 //!
