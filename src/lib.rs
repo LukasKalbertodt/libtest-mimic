@@ -1,38 +1,69 @@
-//! Write your own test scripts that look and behave like built-in tests!
+//! Write your own tests and benchmarks that look and behave like built-in tests!
 //!
-//! This is a simple and small testing framework that mimics the original
-//! `libtest` (used by `cargo test`/`rustc --test`). That means: all output
-//! looks pretty much like `cargo test` and most CLI arguments are understood
-//! and used. With that plumbing work out of the way, your test runner can
-//! concentrate on the actual testing.
+//! This is a simple and small test harness that mimics the original `libtest`
+//! (used by `cargo test`/`rustc --test`). That means: all output looks pretty
+//! much like `cargo test` and most CLI arguments are understood and used. With
+//! that plumbing work out of the way, your test runner can focus on the actual
+//! testing.
 //!
-//! The central function of this crate is [`run`].
 //!
-//! # Example
+//! # Usage
+//!
+//! To use this, you most likely want to add a manual `[[test]]` section to
+//! `Cargo.toml` and set `harness = false`. For example:
+//!
+//! ```toml
+//! [[test]]
+//! name = "mytest"
+//! path = "tests/mytest.rs"
+//! harness = false
+//! ```
+//!
+//! And in `tests/mytest.rs` you would call [`run`] in the `main` function:
 //!
 //! ```no_run
-//! extern crate libtest_mimic;
-//!
 //! use libtest_mimic::{Arguments, Trial};
 //!
 //!
 //! // Parse command line arguments
 //! let args = Arguments::from_args();
 //!
-//! // Create a list of tests (in this case: two dummy tests)
+//! // Create a list of tests and/or benchmarks (in this case: two dummy tests).
 //! let tests = vec![
-//!     Trial::test("check_toph", move || { /* The test */ Ok(()) }),
-//!     Trial::test("check_sokka", move || { /* The test */ Err("Woops".into()) }),
+//!     Trial::test("succeeding_test", move || Ok(())),
+//!     Trial::test("failing_test", move || Err("Woops".into())),
 //! ];
 //!
 //! // Run all tests and exit the application appropriatly.
 //! libtest_mimic::run(&args, tests).exit();
 //! ```
 //!
-//! For more examples, see [`examples/` in the repository][repo-examples].
+//! Instead of returning `Ok` or `Err` directly, you want to actually perform
+//! your tests, of course. See [`Trial::test`] for more information on how to
+//! define a test. You can of course list all your tests manually. But in many
+//! cases it is useful to generate one test per file in a directory, for
+//! example.
+//!
+//! You can then run `cargo test --test mytest` to run it. To see the CLI
+//! arguments supported by this crate, run `cargo test --test mytest -- -h`.
 //!
 //!
-//! [repo-examples]: https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples
+//! # Known limitations and differences to the official test harness
+//!
+//! `libtest-mimic` works on a best-effort basis: it tries to be as close to
+//! `libtest` as possible, but there are differences for a variety of reasons.
+//! For example, some rarely used features might not be implemented, some
+//! features are extremely difficult to implement, and removing minor,
+//! unimportant differences is just not worth the hassle.
+//!
+//! Some of the notable differences:
+//!
+//! - Output capture and `--nocapture`: simply not supported. `libtest` uses
+//!   internal `std` functions to temporarily redirect output. See [this issue]
+//!   (https://github.com/LukasKalbertodt/libtest-mimic/issues/9) for more
+//!   information.
+//! - `--format=json|junit`
+//!
 
 use std::{process, sync::mpsc, fmt, time::Instant};
 
@@ -54,9 +85,9 @@ pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 /// A trial is create via [`Trial::test`] or [`Trial::bench`]. The trial's
 /// `name` is printed and used for filtering. The `runner` is called when the
 /// test/benchmark is executed to determine its outcome. If `runner` panics,
-/// the trial is considered "failed". If you need `#[should_panic]`-like
-/// behavior, you need to catch the panic yourself. You likely want to compare
-/// the panic payload to an expected value anyway.
+/// the trial is considered "failed". If you need the behavior of
+/// `#[should_panic]` you need to catch the panic yourself. You likely want to
+/// compare the panic payload to an expected value anyway.
 pub struct Trial {
     runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
     info: TestInfo,
@@ -64,6 +95,9 @@ pub struct Trial {
 
 impl Trial {
     /// Creates a (non-benchmark) test with the given name and runner.
+    ///
+    /// The runner returning `Ok(())` is interpreted as the test passing. If the
+    /// runner returns `Err(_)`, the test is considered failed.
     pub fn test<R>(name: impl Into<String>, runner: R) -> Self
     where
         R: FnOnce() -> Result<(), Failed> + Send + 'static,
@@ -87,11 +121,11 @@ impl Trial {
     /// If the runner's parameter `test_mode` is `true`, the runner function
     /// should run all code just once, without measuring, just to make sure it
     /// does not panic. If the parameter is `false`, it should perform the
-    /// actual benchmark. If `test_mode` is `true` you may return `Ok
-    /// (None)`, but if it's `false`, you have to return a `Measurement`, or
-    /// else the benchmark is considered a failure.
+    /// actual benchmark. If `test_mode` is `true` you may return `Ok(None)`,
+    /// but if it's `false`, you have to return a `Measurement`, or else the
+    /// benchmark is considered a failure.
     ///
-    /// `test_mod` is `true` if neither `--bench` nor `--test` are set, and
+    /// `test_mode` is `true` if neither `--bench` nor `--test` are set, and
     /// `false` when `--bench` is set. If `--test` is set, benchmarks are not
     /// ran at all, and both flags cannot be set at the same time.
     pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
@@ -118,6 +152,8 @@ impl Trial {
     /// Sets the "kind" of this test/benchmark. If this string is not
     /// empty, it is printed in brackets before the test name (e.g.
     /// `test [my-kind] test_name`). (Default: *empty*)
+    ///
+    /// This is the only extension to the original libtest.
     pub fn with_kind(self, kind: impl Into<String>) -> Self {
         Self {
             info: TestInfo {
@@ -183,16 +219,21 @@ pub struct Measurement {
 }
 
 /// Indicates that a test/benchmark has failed. Optionally carries a message.
+///
+/// You usually want to use the `From` impl of this type, which allows you to
+/// convert any `T: fmt::Display` (e.g. `String`, `&str`, ...) into `Failed`.
 #[derive(Debug, Clone)]
 pub struct Failed {
     msg: Option<String>,
 }
 
 impl Failed {
+    /// Creates an instance without message.
     pub fn without_message() -> Self {
         Self { msg: None }
     }
 
+    /// Returns the message of this instance.
     pub fn message(&self) -> Option<&str> {
         self.msg.as_deref()
     }
@@ -324,27 +365,9 @@ impl Arguments {
 /// This is the central function of this crate. It provides the framework for
 /// the testing harness. It does all the printing and house keeping.
 ///
-/// This function tries to respect most options configured via CLI args. For
-/// example, filtering, output format and coloring are respected. However, some
-/// things cannot be handled by this function and *you* (as a user) need to
-/// take care of it yourself. The following options are ignored by this
-/// function and need to be manually checked:
-///
-/// - `--nocapture` and capturing in general. It is expected that during the
-///   test, nothing writes to `stdout` and `stderr`, unless `--nocapture` was
-///   specified. If the test is ran as a seperate process, this is fairly easy.
-///   If however, the test is part of the current application and it uses
-///   `println!()` and friends, it might be impossible to capture the output.
-///
-/// Currently, the following CLI arg is ignored, but is planned to be used
-/// in the future:
-/// - `--format=json`. If specified, this function will panic.
-///
-/// All other flags and options are used properly.
-///
-/// The returned value contains a couple of useful information. See the
-/// [`Conclusion`] documentation for more information. If `--list` was
-/// specified, a list is printed and a dummy `Conclusion` is returned.
+/// The returned value contains a couple of useful information. See
+/// [`Conclusion`] for more information. If `--list` was specified, a list is
+/// printed and a dummy `Conclusion` is returned.
 pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     let start_instant = Instant::now();
     let mut conclusion = Conclusion::empty();

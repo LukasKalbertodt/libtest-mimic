@@ -8,30 +8,15 @@ use clap::Parser;
 /// method is [`from_args`][Arguments::from_args] which reads the global
 /// `std::env::args()` and parses them into this type.
 ///
-/// The CLI is very similar to the one from the native test harness. However,
-/// there are minor differences:
-/// - Most notable: the `--help` message is slightly different. This comes from
-///   the fact that this crate (right now) uses clap while the original
-///   `libtest` uses `docopt`.
-/// - `--skip` only accepts one value per occurence (but can occur multiple
-///   times). This solves ambiguity with the `filter` value at the very end.
-///   Consider "`--skip foo bar`": should this be parsed as `skip: vec!["foo",
-///   "bar"], filter: None` or `skip: vec!["foo"], filter: Some("bar")`? Here,
-///   it's clearly the latter version. If you need multiple values for `skip`,
-///   do it like this: `--skip foo --skip bar`.
-/// - `--bench` and `--test` cannot be both set at the same time. It doesn't
-///   make sense, but it's allowed in `libtest` for some reason.
-///
-/// **Note**: just because all CLI args can be parsed, doesn't mean that they
-/// are all automatically used. Check [`run`][crate::run] for information on
-/// which arguments are automatically used and require special care.
+/// `libtest-mimic` supports a subset of all args/flags supported by the
+/// official test harness. There are also some other minor CLI differences, but
+/// the main use cases should work exactly like with the built-in harness.
 #[derive(Parser, Debug, Clone, Default)]
 #[clap(
     help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
     disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
-        --test-threads flag or the RUST_TEST_THREADS environment variable when running \n\
-        tests (set it to 1).",
+        --test-threads flag when running tests (set it to 1).",
 )]
 pub struct Arguments {
     // ============== FLAGS ===================================================
@@ -83,7 +68,8 @@ pub struct Arguments {
     /// Number of threads used for parallel testing.
     #[clap(
         long = "--test-threads",
-        help = "Number of threads used for running tests in parallel",
+        help = "Number of threads used for running tests in parallel. If set to 1, \n\
+            all tests are run in the main thread.",
     )]
     pub test_threads: Option<usize>,
 
