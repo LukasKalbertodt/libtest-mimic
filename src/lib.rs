@@ -391,7 +391,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
             let outcome = if args.is_ignored(&test) {
                 Outcome::Ignored
             } else {
-                (test.runner)(test_mode)
+                run_single(test.runner, test_mode)
             };
             handle_outcome(outcome, test.info, &mut printer);
         }
@@ -410,7 +410,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
                     // It's fine to ignore the result of sending. If the
                     // receiver has hung up, everything will wind down soon
                     // anyway.
-                    let outcome = (test.runner)(test_mode);
+                    let outcome = run_single(test.runner, test_mode);
                     let _ = sender.send((outcome, test.info));
                 });
             }
@@ -433,4 +433,24 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     printer.print_summary(&conclusion, start_instant.elapsed());
 
     conclusion
+}
+
+/// Runs the given runner, catching any panics and treating them as a failed test.
+fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) -> Outcome {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    catch_unwind(AssertUnwindSafe(move || runner(test_mode))).unwrap_or_else(|e| {
+        // The `panic` information is just an `Any` object representing the
+        // value the panic was invoked with. For most panics (which use
+        // `panic!` like `println!`), this is either `&str` or `String`.
+        let payload = e.downcast_ref::<String>()
+            .map(|s| s.as_str())
+            .or(e.downcast_ref::<&str>().map(|s| *s));
+
+        let msg = match payload {
+            Some(payload) => format!("test panicked: {payload}"),
+            None => format!("test panicked"),
+        };
+        Outcome::Failed(msg.into())
+    })
 }
