@@ -182,6 +182,32 @@ impl Trial {
             ..self
         }
     }
+
+    /// Returns the name of this trial.
+    pub fn name(&self) -> &str {
+        &self.info.name
+    }
+
+    /// Returns the kind of this trial. If you have not set a kind, this is an
+    /// empty string.
+    pub fn kind(&self) -> &str {
+        &self.info.kind
+    }
+
+    /// Returns whether this trial has been marked as *ignored*.
+    pub fn has_ignored_flag(&self) -> bool {
+        self.info.is_ignored
+    }
+
+    /// Returns `true` iff this trial is a test (as opposed to a benchmark).
+    pub fn is_test(&self) -> bool {
+        !self.info.is_bench
+    }
+
+    /// Returns `true` iff this trial is a benchmark (as opposed to a test).
+    pub fn is_bench(&self) -> bool {
+        self.info.is_bench
+    }
 }
 
 impl fmt::Debug for Trial {
