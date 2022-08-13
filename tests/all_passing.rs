@@ -156,6 +156,7 @@ fn terse_output() {
     assert_log!(out, "
         running 3 tests
         ...
-        test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+        test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; \
+            finished in 0.00s
     ");
 }

@@ -523,6 +523,7 @@ fn terse_output() {
             blue
             green
 
-        test result: FAILED. 4 passed; 4 failed; 8 ignored; 0 measured; 0 filtered out; finished in 0.00s
+        test result: FAILED. 4 passed; 4 failed; 8 ignored; 0 measured; 0 filtered out; \
+            finished in 0.00s
     ");
 }
