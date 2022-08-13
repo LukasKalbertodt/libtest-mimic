@@ -290,8 +290,8 @@ fn filter_o_test() {
 }
 
 #[test]
-fn filter_o_test_ignored() {
-    check(args(["--test", "--ignored", "o"]), tests, 6,
+fn filter_o_test_include_ignored() {
+    check(args(["--test", "--include-ignored", "o"]), tests, 6,
         Conclusion {
             num_filtered_out: 10,
             num_passed: 2,
@@ -324,8 +324,35 @@ fn filter_o_test_ignored() {
 }
 
 #[test]
-fn normal_ignored() {
-    check(args(["--ignored"]), tests, 16,
+fn filter_o_test_ignored() {
+    check(args(["--test", "--ignored", "o"]), tests, 3,
+        Conclusion {
+            num_filtered_out: 13,
+            num_passed: 1,
+            num_failed: 1,
+            num_ignored: 1,
+            num_measured: 0,
+        },
+        "
+            test          frog   ... ok
+            test          owl    ... FAILED
+            test [banana] orange ... ignored
+
+            failures:
+
+            ---- owl ----
+            broke neck
+
+
+            failures:
+                owl
+        ",
+    );
+}
+
+#[test]
+fn normal_include_ignored() {
+    check(args(["--include-ignored"]), tests, 16,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 8,
@@ -392,8 +419,52 @@ fn normal_ignored() {
 }
 
 #[test]
+fn normal_ignored() {
+    check(args(["--ignored"]), tests, 8,
+        Conclusion {
+            num_filtered_out: 8,
+            num_passed: 4,
+            num_failed: 4,
+            num_ignored: 0,
+            num_measured: 0,
+        },
+        "
+            test          frog   ... ok
+            test          owl    ... FAILED
+            test [banana] fly    ... ok
+            test [banana] bear   ... FAILED
+            test          purple ... ok
+            test          cyan   ... FAILED
+            test [banana] orange ... ok
+            test [banana] pink   ... FAILED
+
+            failures:
+
+            ---- owl ----
+            broke neck
+
+            ---- bear ----
+            no honey
+
+            ---- cyan ----
+            not creative enough
+
+            ---- pink ----
+            bad
+
+
+            failures:
+                owl
+                bear
+                cyan
+                pink
+        ",
+    );
+}
+
+#[test]
 fn lots_of_flags() {
-    check(args(["--ignored", "--skip", "g", "--test", "o"]), tests, 3,
+    check(args(["--include-ignored", "--skip", "g", "--test", "o"]), tests, 3,
         Conclusion {
             num_filtered_out: 13,
             num_passed: 1,

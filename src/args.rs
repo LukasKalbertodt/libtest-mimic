@@ -35,7 +35,11 @@ use clap::Parser;
 )]
 pub struct Arguments {
     // ============== FLAGS ===================================================
-    /// Determines if ignored tests should be run.
+    /// Run ignored and non-ignored tests.
+    #[clap(long = "--include-ignored", help = "Run ignored tests")]
+    pub include_ignored: bool,
+
+    /// Run only ignored tests.
     #[clap(long = "--ignored", help = "Run ignored tests")]
     pub ignored: bool,
 

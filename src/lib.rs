@@ -280,7 +280,7 @@ impl Conclusion {
 impl Arguments {
     /// Returns `true` if the given test should be ignored.
     fn is_ignored(&self, test: &Test) -> bool {
-        (test.info.is_ignored && !self.ignored)
+        (test.info.is_ignored && !self.ignored && !self.include_ignored)
             || (test.info.is_bench && self.test)
             || (!test.info.is_bench && self.bench)
     }
@@ -304,6 +304,10 @@ impl Arguments {
                 false if test_name.contains(skip_filter) => return true,
                 _ => {}
             }
+        }
+
+        if self.ignored && !test.info.is_ignored {
+            return true;
         }
 
         false
@@ -341,7 +345,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering
-    if args.filter.is_some() || !args.skip.is_empty() {
+    if args.filter.is_some() || !args.skip.is_empty() || args.ignored {
         let len_before = tests.len() as u64;
         tests.retain(|test| !args.is_filtered_out(test));
         conclusion.num_filtered_out = len_before - tests.len() as u64;
