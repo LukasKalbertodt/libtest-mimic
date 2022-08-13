@@ -1,6 +1,6 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Test, Failed};
+use libtest_mimic::{Arguments, Trial, Failed};
 
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
     // Generate 100 dummy tests
     let tests = (0..100)
         .map(|i| {
-            Test::test(format!("test-{:03}", i), move || dummy_test(i))
+            Trial::test(format!("test-{:03}", i), move || dummy_test(i))
                 .with_ignored_flag(i % 23 == 0)
         })
         .collect::<Vec<_>>();

@@ -1,14 +1,14 @@
 use common::{args, check};
-use libtest_mimic::{Test, Conclusion};
+use libtest_mimic::{Trial, Conclusion};
 
 #[macro_use]
 mod common;
 
 
-fn tests() -> Vec<Test> {
+fn tests() -> Vec<Trial> {
     vec![
-        Test::test("passes", || Ok(())),
-        Test::test("panics", || panic!("uh oh")),
+        Trial::test("passes", || Ok(())),
+        Trial::test("panics", || panic!("uh oh")),
     ]
 }
 

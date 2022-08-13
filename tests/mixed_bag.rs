@@ -1,34 +1,34 @@
 use pretty_assertions::assert_eq;
-use libtest_mimic::{Test, Conclusion, Measurement};
+use libtest_mimic::{Trial, Conclusion, Measurement};
 use crate::common::{args, check, do_run};
 
 #[macro_use]
 mod common;
 
 
-fn tests() -> Vec<Test> {
+fn tests() -> Vec<Trial> {
     fn meas(avg: u64, variance: u64) -> Option<Measurement> {
         Some(Measurement { avg, variance })
     }
 
     vec![
-        Test::test("cat", || Ok(())),
-        Test::test("dog", || Err("was not a good boy".into())),
-        Test::test("fox", || Ok(())).with_kind("apple"),
-        Test::test("bunny", || Err("jumped too high".into())).with_kind("apple"),
-        Test::test("frog", || Ok(())).with_ignored_flag(true),
-        Test::test("owl", || Err("broke neck".into())).with_ignored_flag(true),
-        Test::test("fly", || Ok(())).with_ignored_flag(true).with_kind("banana"),
-        Test::test("bear", || Err("no honey".into())).with_ignored_flag(true).with_kind("banana"),
+        Trial::test("cat", || Ok(())),
+        Trial::test("dog", || Err("was not a good boy".into())),
+        Trial::test("fox", || Ok(())).with_kind("apple"),
+        Trial::test("bunny", || Err("jumped too high".into())).with_kind("apple"),
+        Trial::test("frog", || Ok(())).with_ignored_flag(true),
+        Trial::test("owl", || Err("broke neck".into())).with_ignored_flag(true),
+        Trial::test("fly", || Ok(())).with_ignored_flag(true).with_kind("banana"),
+        Trial::test("bear", || Err("no honey".into())).with_ignored_flag(true).with_kind("banana"),
 
-        Test::bench("red", |_| Ok(meas(32, 3))),
-        Test::bench("blue", |_| Err("sky fell down".into())),
-        Test::bench("yellow", |_| Ok(meas(64, 4))).with_kind("kiwi"),
-        Test::bench("green", |_| Err("was poisoned".into())).with_kind("kiwi"),
-        Test::bench("purple", |_| Ok(meas(100, 5))).with_ignored_flag(true),
-        Test::bench("cyan", |_| Err("not creative enough".into())).with_ignored_flag(true),
-        Test::bench("orange", |_| Ok(meas(17, 6))).with_ignored_flag(true).with_kind("banana"),
-        Test::bench("pink", |_| Err("bad".into())).with_ignored_flag(true).with_kind("banana"),
+        Trial::bench("red", |_| Ok(meas(32, 3))),
+        Trial::bench("blue", |_| Err("sky fell down".into())),
+        Trial::bench("yellow", |_| Ok(meas(64, 4))).with_kind("kiwi"),
+        Trial::bench("green", |_| Err("was poisoned".into())).with_kind("kiwi"),
+        Trial::bench("purple", |_| Ok(meas(100, 5))).with_ignored_flag(true),
+        Trial::bench("cyan", |_| Err("not creative enough".into())).with_ignored_flag(true),
+        Trial::bench("orange", |_| Ok(meas(17, 6))).with_ignored_flag(true).with_kind("banana"),
+        Trial::bench("pink", |_| Err("bad".into())).with_ignored_flag(true).with_kind("banana"),
     ]
 }
 

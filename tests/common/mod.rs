@@ -1,7 +1,7 @@
 use std::{path::Path, iter::repeat_with, collections::HashMap};
 use pretty_assertions::assert_eq;
 
-use libtest_mimic::{run, Arguments, Conclusion, Test};
+use libtest_mimic::{run, Arguments, Conclusion, Trial};
 
 
 const TEMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
@@ -12,7 +12,7 @@ pub fn args<const N: usize>(args: [&str; N]) -> Arguments {
     Arguments::from_iter(v)
 }
 
-pub fn do_run(mut args: Arguments, tests: Vec<Test>) -> (Conclusion, String) {
+pub fn do_run(mut args: Arguments, tests: Vec<Trial>) -> (Conclusion, String) {
     // Create path to temporary file.
     let suffix = repeat_with(fastrand::alphanumeric).take(10).collect::<String>();
     let path = Path::new(&TEMPDIR).join(format!("libtest_mimic_output_{suffix}.txt"));
@@ -90,7 +90,7 @@ macro_rules! assert_log {
 
 pub fn check(
     mut args: Arguments,
-    mut tests: impl FnMut() -> Vec<Test>,
+    mut tests: impl FnMut() -> Vec<Trial>,
     num_running_tests: u64,
     expected_conclusion: Conclusion,
     expected_output: &str,

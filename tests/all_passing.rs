@@ -1,5 +1,5 @@
 use common::{args, check};
-use libtest_mimic::{Test, Conclusion};
+use libtest_mimic::{Trial, Conclusion};
 use pretty_assertions::assert_eq;
 
 use crate::common::do_run;
@@ -8,11 +8,11 @@ use crate::common::do_run;
 mod common;
 
 
-fn tests() -> Vec<Test> {
+fn tests() -> Vec<Trial> {
     vec![
-        Test::test("foo", || Ok(())),
-        Test::test("bar", || Ok(())),
-        Test::test("barro", || Ok(())),
+        Trial::test("foo", || Ok(())),
+        Trial::test("bar", || Ok(())),
+        Trial::test("barro", || Ok(())),
     ]
 }
 

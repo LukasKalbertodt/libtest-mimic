@@ -13,7 +13,7 @@
 //! ```no_run
 //! extern crate libtest_mimic;
 //!
-//! use libtest_mimic::{Arguments, Test};
+//! use libtest_mimic::{Arguments, Trial};
 //!
 //!
 //! // Parse command line arguments
@@ -21,8 +21,8 @@
 //!
 //! // Create a list of tests (in this case: two dummy tests)
 //! let tests = vec![
-//!     Test::test("check_toph", move || { /* The test */ Ok(()) }),
-//!     Test::test("check_sokka", move || { /* The test */ Err("Woops".into()) }),
+//!     Trial::test("check_toph", move || { /* The test */ Ok(()) }),
+//!     Trial::test("check_sokka", move || { /* The test */ Err("Woops".into()) }),
 //! ];
 //!
 //! // Run all tests and exit the application appropriatly.
@@ -48,16 +48,21 @@ pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 
 /// A single test or benchmark.
 ///
-/// Yes, `libtest` often counts benchmarks as "tests", which is a bit confusing.
-/// The main parts of this definition is `name`, which is printed and used for
-/// filtering, and `runner`, which is called when the test is executed to
-/// determine its outcome.
-pub struct Test {
+/// `libtest` often treats benchmarks as "tests", which is a bit confusing. So
+/// in this library, it is called "trial".
+///
+/// A trial is create via [`Trial::test`] or [`Trial::bench`]. The trial's
+/// `name` is printed and used for filtering. The `runner` is called when the
+/// test/benchmark is executed to determine its outcome. If `runner` panics,
+/// the trial is considered "failed". If you need `#[should_panic]`-like
+/// behavior, you need to catch the panic yourself. You likely want to compare
+/// the panic payload to an expected value anyway.
+pub struct Trial {
     runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
     info: TestInfo,
 }
 
-impl Test {
+impl Trial {
     /// Creates a (non-benchmark) test with the given name and runner.
     pub fn test<R>(name: impl Into<String>, runner: R) -> Self
     where
@@ -140,7 +145,7 @@ impl Test {
     }
 }
 
-impl fmt::Debug for Test {
+impl fmt::Debug for Trial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct OpaqueRunner;
         impl fmt::Debug for OpaqueRunner {
@@ -279,13 +284,13 @@ impl Conclusion {
 
 impl Arguments {
     /// Returns `true` if the given test should be ignored.
-    fn is_ignored(&self, test: &Test) -> bool {
+    fn is_ignored(&self, test: &Trial) -> bool {
         (test.info.is_ignored && !self.ignored && !self.include_ignored)
             || (test.info.is_bench && self.test)
             || (!test.info.is_bench && self.bench)
     }
 
-    fn is_filtered_out(&self, test: &Test) -> bool {
+    fn is_filtered_out(&self, test: &Trial) -> bool {
         let test_name = &test.info.name;
 
         // If a filter was specified, apply this
@@ -340,7 +345,7 @@ impl Arguments {
 /// The returned value contains a couple of useful information. See the
 /// [`Conclusion`] documentation for more information. If `--list` was
 /// specified, a list is printed and a dummy `Conclusion` is returned.
-pub fn run(args: &Arguments, mut tests: Vec<Test>) -> Conclusion {
+pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     let start_instant = Instant::now();
     let mut conclusion = Conclusion::empty();
 

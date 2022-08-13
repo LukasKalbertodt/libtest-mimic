@@ -1,18 +1,18 @@
 extern crate libtest_mimic;
 
 use std::{thread, time};
-use libtest_mimic::{Arguments, Test, Failed};
+use libtest_mimic::{Arguments, Trial, Failed};
 
 
 fn main() {
     let args = Arguments::from_args();
 
     let tests = vec![
-        Test::test("check_toph", check_toph),
-        Test::test("check_sokka", check_sokka),
-        Test::test("long_computation", long_computation).with_ignored_flag(true),
-        Test::test("foo", compile_fail_dummy).with_kind("compile-fail"),
-        Test::test("check_katara", check_katara),
+        Trial::test("check_toph", check_toph),
+        Trial::test("check_sokka", check_sokka),
+        Trial::test("long_computation", long_computation).with_ignored_flag(true),
+        Trial::test("foo", compile_fail_dummy).with_kind("compile-fail"),
+        Trial::test("check_katara", check_katara),
     ];
 
     libtest_mimic::run(&args, tests).exit();
