@@ -1,49 +1,23 @@
-libtest-mimic
-=============
-[![CI](https://github.com/LukasKalbertodt/libtest-mimic/actions/workflows/ci.yml/badge.svg)](https://github.com/LukasKalbertodt/libtest-mimic/actions/workflows/ci.yml)
-[![crates.io version](https://img.shields.io/crates/v/libtest-mimic.svg)](https://crates.io/crates/libtest-mimic)
-[![docs](https://docs.rs/libtest-mimic/badge.svg)](https://docs.rs/libtest-mimic)
+# libtest-mimic
 
-Write your own test harness that looks and behaves like the built-in test harness (used by `rustc --test`)! (MSRV 1.56)
+[<img alt="CI status of master" src="https://img.shields.io/github/workflow/status/LukasKalbertodt/libtest-mimic/CI/master?label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/libtest-mimic/actions?query=workflow%3ACI+branch%3Amaster)
+[<img alt="Crates.io Version" src="https://img.shields.io/crates/v/libtest-mimic?logo=rust&style=for-the-badge" height="23">](https://crates.io/crates/libtest-mimic)
+[<img alt="docs.rs" src="https://img.shields.io/crates/v/libtest-mimic?color=blue&label=docs&style=for-the-badge" height="23">](https://docs.rs/libtest-mimic)
 
-This is a simple and small testing framework that mimics the original `libtest` (used by `rustc --test`). That means: all output looks pretty much like `cargo test` and most CLI arguments are understood and used. With that plumbing work out of the way, your test runner can concentrate on the actual testing.
+Write your own test harness that looks and behaves like the built-in test harness (used by `rustc --test`)!
 
-**See it in action** (with the `tidy` example):
+This is a simple and small testing framework that mimics the original `libtest`.
+That means: all output looks pretty much like `cargo test` and most CLI arguments are understood and used.
+With that plumbing work out of the way, your test runner can focus on the actual testing.
+(MSRV: 1.56)
 
-[![asciicast](https://asciinema.org/a/ZBQ5vkwW5VaQCn7VGohuNFxr2.png)](https://asciinema.org/a/ZBQ5vkwW5VaQCn7VGohuNFxr2)
-
-
-# Example
-
-```rust
-extern crate libtest_mimic;
-
-use libtest_mimic::{Arguments, Test, Outcome, run_tests};
+See [**the documentation**](https://docs.rs/libtest-mimic) or [the `examples/` folder](/examples) for more information.
 
 
-// Parse command line arguments
-let args = Arguments::from_args();
+<p align="center">
+    <img src=".github/readme.png" width="95%"></img>
+</p>
 
-// Create a list of tests (in this case: three dummy tests)
-let tests = vec![
-    Test::test("toph"),
-    Test::test("sokka"),
-    Test {
-        name: "long_computation".into(),
-        kind: "".into(),
-        is_ignored: true,
-        is_bench: false,
-        data: (),
-    },
-];
-
-// Run all tests and exit the application appropriatly (in this case, the
-// test runner is a dummy runner which does nothing and says that all s
-// passed).
-run_tests(&args, tests, |test| Outcome::Passed).exit();
-```
-
-For more examples, see [`examples/`](https://github.com/LukasKalbertodt/libtest-mimic/tree/master/examples).
 
 ---
 
