@@ -44,6 +44,10 @@ pub struct Arguments {
     #[clap(long = "--list", help = "List all tests and benchmarks")]
     pub list: bool,
 
+    /// No-op, ignored (libtest-mimic always runs in no-capture mode)
+    #[clap(long = "--nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
+    pub nocapture: bool,
+
     /// If set, filters are matched exactly rather than by substring.
     #[clap(
         long = "--exact",
