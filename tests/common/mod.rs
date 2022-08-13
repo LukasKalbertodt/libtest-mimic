@@ -96,7 +96,7 @@ pub fn check(
     expected_output: &str,
 ) {
     // Run in single threaded mode
-    args.num_threads = Some(1);
+    args.test_threads = Some(1);
     let (c, out) = do_run(args.clone(), tests());
     let expected = crate::common::clean_expected_log(expected_output);
     let actual = {

@@ -85,7 +85,7 @@ pub struct Arguments {
         long = "--test-threads",
         help = "Number of threads used for running tests in parallel",
     )]
-    pub num_threads: Option<usize>,
+    pub test_threads: Option<usize>,
 
     /// Path of the logfile. If specified, everything will be written into the
     /// file instead of stdout.

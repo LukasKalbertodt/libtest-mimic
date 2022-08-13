@@ -387,7 +387,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     // Execute all tests.
     let test_mode = !args.bench;
-    if args.num_threads == Some(1) {
+    if args.test_threads == Some(1) {
         // Run test sequentially in main thread
         for test in tests {
             // Print `test foo    ...`, run the test, then print the outcome in
