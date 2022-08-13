@@ -1,6 +1,6 @@
 use pretty_assertions::assert_eq;
 use libtest_mimic::{Test, Conclusion, Measurement};
-use crate::common::{args, check};
+use crate::common::{args, check, do_run};
 
 #[macro_use]
 mod common;
@@ -487,4 +487,42 @@ fn lots_of_flags() {
                 owl
         ",
     );
+}
+
+#[test]
+fn terse_output() {
+    let (c, out) = do_run(args(["--format", "terse", "--test-threads", "1"]), tests());
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 4,
+        num_failed: 4,
+        num_ignored: 8,
+        num_measured: 0,
+    });
+    assert_log!(out, "
+        running 16 tests
+        .F.Fiiii.F.Fiiii
+        failures:
+
+        ---- dog ----
+        was not a good boy
+
+        ---- bunny ----
+        jumped too high
+
+        ---- blue ----
+        sky fell down
+
+        ---- green ----
+        was poisoned
+
+
+        failures:
+            dog
+            bunny
+            blue
+            green
+
+        test result: FAILED. 4 passed; 4 failed; 8 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    ");
 }
