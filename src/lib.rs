@@ -61,12 +61,13 @@
 //!
 //! Some of the notable differences:
 //!
-//! - Output capture and `--nocapture`: simply not supported. `libtest` uses
-//!   internal `std` functions to temporarily redirect output. See [this issue]
-//!   (https://github.com/LukasKalbertodt/libtest-mimic/issues/9) for more
+//! - Output capture and `--nocapture`: simply not supported. The official
+//!   `libtest` uses internal `std` functions to temporarily redirect output.
+//!   `libtest-mimic` cannot use those. See [this issue][capture] for more
 //!   information.
 //! - `--format=json|junit`
 //!
+//! [capture]: https://github.com/LukasKalbertodt/libtest-mimic/issues/9
 
 use std::{process, sync::mpsc, fmt, time::Instant};
 
