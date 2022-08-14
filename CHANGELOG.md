@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.5.2] - 2022-08-14
+### Added
+- Re-add `--nocapture` as a noop argument [#18](https://github.com/LukasKalbertodt/libtest-mimic/pull/18) (thanks @sunshowers)
+
+### Fixed
+- Link in documentation
+
 ## [0.5.1] - 2022-08-13
 ### Added
 - `Trial::{name, kind, has_ignored_flag, is_test, is_bench}` getters
@@ -76,7 +83,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.0...v0.4.1
