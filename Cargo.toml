@@ -16,6 +16,7 @@ keywords = ["libtest", "test", "built-in", "framework", "harness"]
 categories = ["development-tools::testing", "development-tools::build-utils"]
 readme = "README.md"
 
+exclude = [".github"]
 
 [dependencies]
 clap = { version = "3.1.8", features = ["derive"] }
