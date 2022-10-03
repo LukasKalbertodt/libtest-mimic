@@ -12,7 +12,7 @@ use clap::Parser;
 /// official test harness. There are also some other minor CLI differences, but
 /// the main use cases should work exactly like with the built-in harness.
 #[derive(Parser, Debug, Clone, Default)]
-#[clap(
+#[command(
     help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
     disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
@@ -21,15 +21,15 @@ use clap::Parser;
 pub struct Arguments {
     // ============== FLAGS ===================================================
     /// Run ignored and non-ignored tests.
-    #[clap(long = "--include-ignored", help = "Run ignored tests")]
+    #[arg(long = "--include-ignored", help = "Run ignored tests")]
     pub include_ignored: bool,
 
     /// Run only ignored tests.
-    #[clap(long = "--ignored", help = "Run ignored tests")]
+    #[arg(long = "--ignored", help = "Run ignored tests")]
     pub ignored: bool,
 
     /// Run tests, but not benchmarks.
-    #[clap(
+    #[arg(
         long = "--test",
         conflicts_with = "bench",
         help = "Run tests and not benchmarks",
@@ -37,19 +37,19 @@ pub struct Arguments {
     pub test: bool,
 
     /// Run benchmarks, but not tests.
-    #[clap(long = "--bench", help = "Run benchmarks instead of tests")]
+    #[arg(long = "--bench", help = "Run benchmarks instead of tests")]
     pub bench: bool,
 
     /// Only list all tests and benchmarks.
-    #[clap(long = "--list", help = "List all tests and benchmarks")]
+    #[arg(long = "--list", help = "List all tests and benchmarks")]
     pub list: bool,
 
     /// No-op, ignored (libtest-mimic always runs in no-capture mode)
-    #[clap(long = "--nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
+    #[arg(long = "--nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
     pub nocapture: bool,
 
     /// If set, filters are matched exactly rather than by substring.
-    #[clap(
+    #[arg(
         long = "--exact",
         help = "Exactly match filters rather than by substring",
     )]
@@ -60,7 +60,7 @@ pub struct Arguments {
     ///
     /// This is an alias for `--format=terse`. If this is set, `format` is
     /// `None`.
-    #[clap(
+    #[arg(
         short = 'q',
         long = "--quiet",
         conflicts_with = "format",
@@ -70,7 +70,7 @@ pub struct Arguments {
 
     // ============== OPTIONS =================================================
     /// Number of threads used for parallel testing.
-    #[clap(
+    #[arg(
         long = "--test-threads",
         help = "Number of threads used for running tests in parallel. If set to 1, \n\
             all tests are run in the main thread.",
@@ -79,7 +79,7 @@ pub struct Arguments {
 
     /// Path of the logfile. If specified, everything will be written into the
     /// file instead of stdout.
-    #[clap(
+    #[arg(
         long = "--logfile",
         value_name = "PATH",
         help = "Write logs to the specified file instead of stdout",
@@ -88,16 +88,16 @@ pub struct Arguments {
 
     /// A list of filters. Tests whose names contain parts of any of these
     /// filters are skipped.
-    #[clap(
+    #[arg(
         long = "--skip",
         value_name = "FILTER",
-        number_of_values = 1,
+        num_args = 1,
         help = "Skip tests whose names contain FILTER (this flag can be used multiple times)",
     )]
     pub skip: Vec<String>,
 
     /// Specifies whether or not to color the output.
-    #[clap(
+    #[arg(
         long = "--color",
         value_parser = ["auto", "always", "never"],
         value_name = "auto|always|never",
@@ -109,7 +109,7 @@ pub struct Arguments {
     pub color: Option<ColorSetting>,
 
     /// Specifies the format of the output.
-    #[clap(
+    #[arg(
         long = "--format",
         value_parser = ["pretty", "terse"],
         value_name = "pretty|terse|json",
@@ -121,8 +121,8 @@ pub struct Arguments {
 
     // ============== POSITIONAL VALUES =======================================
     /// Filter string. Only tests which contain this string are run.
-    #[clap(
-        name = "FILTER",
+    #[arg(
+        value_name = "FILTER",
         help = "The FILTER string is tested against the name of all tests, and only those tests \
                 whose names contain the filter are run.",
     )]
