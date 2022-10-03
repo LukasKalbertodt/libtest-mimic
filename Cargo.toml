@@ -19,7 +19,7 @@ readme = "README.md"
 exclude = [".github"]
 
 [dependencies]
-clap = { version = "3.1.8", features = ["derive"] }
+clap = { version = "4.0.8", features = ["derive"] }
 threadpool = "1.8.1"
 termcolor = "1.0.5"
 

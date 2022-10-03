@@ -99,7 +99,7 @@ pub struct Arguments {
     /// Specifies whether or not to color the output.
     #[clap(
         long = "--color",
-        possible_values = &["auto", "always", "never"],
+        value_parser = ["auto", "always", "never"],
         value_name = "auto|always|never",
         help = "Configure coloring of output: \n\
             - auto = colorize if stdout is a tty and tests are run on serially (default)\n\
@@ -111,7 +111,7 @@ pub struct Arguments {
     /// Specifies the format of the output.
     #[clap(
         long = "--format",
-        possible_values = &["pretty", "terse"],
+        value_parser = ["pretty", "terse"],
         value_name = "pretty|terse|json",
         help = "Configure formatting of output: \n\
             - pretty = Print verbose output\n\
