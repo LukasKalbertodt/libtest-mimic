@@ -212,11 +212,11 @@ impl FromStr for FormatSetting {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+    use super::*;
 
-	#[test]
-	fn verify_cli() {
-		use clap::CommandFactory;
-		Arguments::command().debug_assert()
-	}
+    #[test]
+    fn verify_cli() {
+        use clap::CommandFactory;
+        Arguments::command().debug_assert()
+    }
 }
