@@ -1,8 +1,7 @@
-use std::{path::Path, iter::repeat_with, collections::HashMap};
 use pretty_assertions::assert_eq;
+use std::{collections::HashMap, iter::repeat_with, path::Path};
 
 use libtest_mimic::{run, Arguments, Conclusion, Trial};
-
 
 const TEMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
 
@@ -14,21 +13,22 @@ pub fn args<const N: usize>(args: [&str; N]) -> Arguments {
 
 pub fn do_run(mut args: Arguments, tests: Vec<Trial>) -> (Conclusion, String) {
     // Create path to temporary file.
-    let suffix = repeat_with(fastrand::alphanumeric).take(10).collect::<String>();
+    let suffix = repeat_with(fastrand::alphanumeric)
+        .take(10)
+        .collect::<String>();
     let path = Path::new(&TEMPDIR).join(format!("libtest_mimic_output_{suffix}.txt"));
 
     args.logfile = Some(path.display().to_string());
 
     let c = run(&args, tests);
-    let output = std::fs::read_to_string(&path)
-        .expect("Can't read temporary logfile");
-    std::fs::remove_file(&path)
-        .expect("Can't remove temporary logfile");
+    let output = std::fs::read_to_string(&path).expect("Can't read temporary logfile");
+    std::fs::remove_file(&path).expect("Can't remove temporary logfile");
     (c, output)
 }
 
 pub fn clean_expected_log(s: &str) -> String {
-    let shared_indent = s.lines()
+    let shared_indent = s
+        .lines()
         .filter(|l| l.contains(|c| c != ' '))
         .map(|l| l.bytes().take_while(|b| *b == b' ').count())
         .min()
@@ -55,8 +55,10 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
     let (first_line, rest) = actual.split_once('\n').expect("log has too few lines");
     let (middle, last_line) = rest.rsplit_once('\n').expect("log has too few lines");
 
-
-    assert_eq!(first_line, &format!("running {} test{}", num, if num == 1 { "" } else { "s" }));
+    assert_eq!(
+        first_line,
+        &format!("running {} test{}", num, if num == 1 { "" } else { "s" })
+    );
     assert!(last_line.contains(tail));
 
     let mut actual_lines = HashMap::new();
@@ -64,7 +66,11 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
         *actual_lines.entry(line).or_insert(0) += 1;
     }
 
-    for expected in expected_lines.iter().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+    for expected in expected_lines
+        .iter()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+    {
         match actual_lines.get_mut(expected) {
             None | Some(0) => panic!("expected line \"{expected}\" not in log"),
             Some(num) => *num -= 1,
@@ -118,7 +124,13 @@ pub fn check(
 }
 
 fn conclusion_to_output(c: &Conclusion) -> String {
-    let Conclusion { num_filtered_out, num_passed, num_failed, num_ignored, num_measured } = *c;
+    let Conclusion {
+        num_filtered_out,
+        num_passed,
+        num_failed,
+        num_ignored,
+        num_measured,
+    } = *c;
     format!(
         "test result: {}. {} passed; {} failed; {} ignored; {} measured; {} filtered out;",
         if num_failed > 0 { "FAILED" } else { "ok" },
