@@ -1,8 +1,9 @@
 use common::{args, check};
-use libtest_mimic::{Conclusion, Trial};
+use libtest_mimic::{Trial, Conclusion};
 
 #[macro_use]
 mod common;
+
 
 fn tests() -> Vec<Trial> {
     vec![
@@ -13,10 +14,7 @@ fn tests() -> Vec<Trial> {
 
 #[test]
 fn normal() {
-    check(
-        args([]),
-        tests,
-        2,
+    check(args([]), tests, 2,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 1,
@@ -36,6 +34,6 @@ fn normal() {
 
             failures:
                 panics
-        ",
+        "
     );
 }

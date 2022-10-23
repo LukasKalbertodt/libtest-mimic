@@ -1,8 +1,15 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Failed, Trial};
+use libtest_mimic::{Arguments, Trial, Failed};
 
-use std::{env, error::Error, ffi::OsStr, fs, path::Path};
+use std::{
+    env,
+    error::Error,
+    ffi::OsStr,
+    fs,
+    path::Path,
+};
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Arguments::from_args();
@@ -27,7 +34,8 @@ fn collect_tests() -> Result<Vec<Trial>, Box<dyn Error>> {
                         .display()
                         .to_string();
 
-                    let test = Trial::test(name, move || check_file(&path)).with_kind("tidy");
+                    let test = Trial::test(name, move || check_file(&path))
+                        .with_kind("tidy");
                     tests.push(test);
                 }
             } else if file_type.is_dir() {

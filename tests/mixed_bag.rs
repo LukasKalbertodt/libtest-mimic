@@ -1,9 +1,10 @@
-use crate::common::{args, check, do_run};
-use libtest_mimic::{Conclusion, Measurement, Trial};
 use pretty_assertions::assert_eq;
+use libtest_mimic::{Trial, Conclusion, Measurement};
+use crate::common::{args, check, do_run};
 
 #[macro_use]
 mod common;
+
 
 fn tests() -> Vec<Trial> {
     fn meas(avg: u64, variance: u64) -> Option<Measurement> {
@@ -17,33 +18,23 @@ fn tests() -> Vec<Trial> {
         Trial::test("bunny", || Err("jumped too high".into())).with_kind("apple"),
         Trial::test("frog", || Ok(())).with_ignored_flag(true),
         Trial::test("owl", || Err("broke neck".into())).with_ignored_flag(true),
-        Trial::test("fly", || Ok(()))
-            .with_ignored_flag(true)
-            .with_kind("banana"),
-        Trial::test("bear", || Err("no honey".into()))
-            .with_ignored_flag(true)
-            .with_kind("banana"),
+        Trial::test("fly", || Ok(())).with_ignored_flag(true).with_kind("banana"),
+        Trial::test("bear", || Err("no honey".into())).with_ignored_flag(true).with_kind("banana"),
+
         Trial::bench("red", |_| Ok(meas(32, 3))),
         Trial::bench("blue", |_| Err("sky fell down".into())),
         Trial::bench("yellow", |_| Ok(meas(64, 4))).with_kind("kiwi"),
         Trial::bench("green", |_| Err("was poisoned".into())).with_kind("kiwi"),
         Trial::bench("purple", |_| Ok(meas(100, 5))).with_ignored_flag(true),
         Trial::bench("cyan", |_| Err("not creative enough".into())).with_ignored_flag(true),
-        Trial::bench("orange", |_| Ok(meas(17, 6)))
-            .with_ignored_flag(true)
-            .with_kind("banana"),
-        Trial::bench("pink", |_| Err("bad".into()))
-            .with_ignored_flag(true)
-            .with_kind("banana"),
+        Trial::bench("orange", |_| Ok(meas(17, 6))).with_ignored_flag(true).with_kind("banana"),
+        Trial::bench("pink", |_| Err("bad".into())).with_ignored_flag(true).with_kind("banana"),
     ]
 }
 
 #[test]
 fn normal() {
-    check(
-        args([]),
-        tests,
-        16,
+    check(args([]), tests, 16,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 4,
@@ -95,10 +86,7 @@ fn normal() {
 
 #[test]
 fn test_mode() {
-    check(
-        args(["--test"]),
-        tests,
-        16,
+    check(args(["--test"]), tests, 16,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 2,
@@ -142,10 +130,7 @@ fn test_mode() {
 
 #[test]
 fn bench_mode() {
-    check(
-        args(["--bench"]),
-        tests,
-        16,
+    check(args(["--bench"]), tests, 16,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 0,
@@ -190,9 +175,7 @@ fn bench_mode() {
 #[test]
 fn list() {
     let (c, out) = common::do_run(args(["--list"]), tests());
-    assert_log!(
-        out,
-        "
+    assert_log!(out, "
         cat: test
         dog: test
         [apple] fox: test
@@ -209,26 +192,20 @@ fn list() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    "
-    );
-    assert_eq!(
-        c,
-        Conclusion {
-            num_filtered_out: 0,
-            num_passed: 0,
-            num_failed: 0,
-            num_ignored: 0,
-            num_measured: 0,
-        }
-    );
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
 }
 
 #[test]
 fn list_ignored() {
     let (c, out) = common::do_run(args(["--list", "--ignored"]), tests());
-    assert_log!(
-        out,
-        "
+    assert_log!(out, "
         frog: test
         owl: test
         [banana] fly: test
@@ -237,50 +214,37 @@ fn list_ignored() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    "
-    );
-    assert_eq!(
-        c,
-        Conclusion {
-            num_filtered_out: 0,
-            num_passed: 0,
-            num_failed: 0,
-            num_ignored: 0,
-            num_measured: 0,
-        }
-    );
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
 }
 
 #[test]
 fn list_with_filter() {
     let (c, out) = common::do_run(args(["--list", "a"]), tests());
-    assert_log!(
-        out,
-        "
+    assert_log!(out, "
         cat: test
         [banana] bear: test
         cyan: bench
         [banana] orange: bench
-    "
-    );
-    assert_eq!(
-        c,
-        Conclusion {
-            num_filtered_out: 0,
-            num_passed: 0,
-            num_failed: 0,
-            num_ignored: 0,
-            num_measured: 0,
-        }
-    );
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+     });
 }
 
 #[test]
 fn filter_c() {
-    check(
-        args(["c"]),
-        tests,
-        2,
+    check(args(["c"]), tests, 2,
         Conclusion {
             num_filtered_out: 14,
             num_passed: 1,
@@ -297,10 +261,7 @@ fn filter_c() {
 
 #[test]
 fn filter_o_test() {
-    check(
-        args(["--test", "o"]),
-        tests,
-        6,
+    check(args(["--test", "o"]), tests, 6,
         Conclusion {
             num_filtered_out: 10,
             num_passed: 1,
@@ -330,10 +291,7 @@ fn filter_o_test() {
 
 #[test]
 fn filter_o_test_include_ignored() {
-    check(
-        args(["--test", "--include-ignored", "o"]),
-        tests,
-        6,
+    check(args(["--test", "--include-ignored", "o"]), tests, 6,
         Conclusion {
             num_filtered_out: 10,
             num_passed: 2,
@@ -367,10 +325,7 @@ fn filter_o_test_include_ignored() {
 
 #[test]
 fn filter_o_test_ignored() {
-    check(
-        args(["--test", "--ignored", "o"]),
-        tests,
-        3,
+    check(args(["--test", "--ignored", "o"]), tests, 3,
         Conclusion {
             num_filtered_out: 13,
             num_passed: 1,
@@ -397,10 +352,7 @@ fn filter_o_test_ignored() {
 
 #[test]
 fn normal_include_ignored() {
-    check(
-        args(["--include-ignored"]),
-        tests,
-        16,
+    check(args(["--include-ignored"]), tests, 16,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 8,
@@ -468,10 +420,7 @@ fn normal_include_ignored() {
 
 #[test]
 fn normal_ignored() {
-    check(
-        args(["--ignored"]),
-        tests,
-        8,
+    check(args(["--ignored"]), tests, 8,
         Conclusion {
             num_filtered_out: 8,
             num_passed: 4,
@@ -515,10 +464,7 @@ fn normal_ignored() {
 
 #[test]
 fn lots_of_flags() {
-    check(
-        args(["--include-ignored", "--skip", "g", "--test", "o"]),
-        tests,
-        3,
+    check(args(["--include-ignored", "--skip", "g", "--test", "o"]), tests, 3,
         Conclusion {
             num_filtered_out: 13,
             num_passed: 1,
@@ -546,19 +492,14 @@ fn lots_of_flags() {
 #[test]
 fn terse_output() {
     let (c, out) = do_run(args(["--format", "terse", "--test-threads", "1"]), tests());
-    assert_eq!(
-        c,
-        Conclusion {
-            num_filtered_out: 0,
-            num_passed: 4,
-            num_failed: 4,
-            num_ignored: 8,
-            num_measured: 0,
-        }
-    );
-    assert_log!(
-        out,
-        "
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 4,
+        num_failed: 4,
+        num_ignored: 8,
+        num_measured: 0,
+    });
+    assert_log!(out, "
         running 16 tests
         .F.Fiiii.F.Fiiii
         failures:
@@ -584,6 +525,5 @@ fn terse_output() {
 
         test result: FAILED. 4 passed; 4 failed; 8 ignored; 0 measured; 0 filtered out; \
             finished in 0.00s
-    "
-    );
+    ");
 }

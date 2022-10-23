@@ -1,7 +1,8 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Failed, Trial};
 use std::{thread, time};
+use libtest_mimic::{Arguments, Trial, Failed};
+
 
 fn main() {
     let args = Arguments::from_args();
@@ -16,6 +17,7 @@ fn main() {
 
     libtest_mimic::run(&args, tests).exit();
 }
+
 
 // Tests
 
