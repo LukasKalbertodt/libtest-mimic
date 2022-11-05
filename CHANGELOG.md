@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.6.0] - 2022-11-05
+### Changed
+- **Breaking**: Updated `clap` to version 4 (thanks @msrd0)
+- **Breaking**: Bump MSRV to 1.60 (due to the clap update)
+
+### Removed
+- **Breaking**: Remove `FromStr` impls for `args::{ColorSetting, FormatSetting}` (use `clap::ValueEnum` instead).
+
 ## [0.5.2] - 2022-08-14
 ### Added
 - Re-add `--nocapture` as a noop argument [#18](https://github.com/LukasKalbertodt/libtest-mimic/pull/18) (thanks @sunshowers)
@@ -83,7 +91,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.4.1...v0.5.0
