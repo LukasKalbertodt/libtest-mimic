@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use clap::{Parser, ValueEnum};
 
 /// Command line arguments.
@@ -171,18 +169,6 @@ impl Default for ColorSetting {
     }
 }
 
-impl FromStr for ColorSetting {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "auto" => Ok(ColorSetting::Auto),
-            "always" => Ok(ColorSetting::Always),
-            "never" => Ok(ColorSetting::Never),
-            _ => Err("invalid color setting"),
-        }
-    }
-}
-
 /// Possible values for the `--format` option.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum FormatSetting {
@@ -199,17 +185,6 @@ impl Default for FormatSetting {
     }
 }
 
-impl FromStr for FormatSetting {
-    type Err = &'static str;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "pretty" => Ok(FormatSetting::Pretty),
-            "terse" => Ok(FormatSetting::Terse),
-            _ => Err("invalid output format"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,6 +192,6 @@ mod tests {
     #[test]
     fn verify_cli() {
         use clap::CommandFactory;
-        Arguments::command().debug_assert()
+        Arguments::command().debug_assert();
     }
 }
