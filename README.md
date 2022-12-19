@@ -1,6 +1,6 @@
 # libtest-mimic
 
-[<img alt="CI status of master" src="https://img.shields.io/github/workflow/status/LukasKalbertodt/libtest-mimic/CI/master?label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/libtest-mimic/actions?query=workflow%3ACI+branch%3Amaster)
+[<img alt="CI status of master" src="https://img.shields.io/github/actions/workflow/status/LukasKalbertodt/libtest-mimic/ci.yml?branch=master&label=CI&logo=github&logoColor=white&style=for-the-badge" height="23">](https://github.com/LukasKalbertodt/libtest-mimic/actions?query=workflow%3ACI+branch%3Amaster)
 [<img alt="Crates.io Version" src="https://img.shields.io/crates/v/libtest-mimic?logo=rust&style=for-the-badge" height="23">](https://crates.io/crates/libtest-mimic)
 [<img alt="docs.rs" src="https://img.shields.io/crates/v/libtest-mimic?color=blue&label=docs&style=for-the-badge" height="23">](https://docs.rs/libtest-mimic)
 
