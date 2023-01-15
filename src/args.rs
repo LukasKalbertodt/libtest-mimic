@@ -89,7 +89,6 @@ pub struct Arguments {
     #[arg(
         long = "skip",
         value_name = "FILTER",
-        num_args = 1,
         help = "Skip tests whose names contain FILTER (this flag can be used multiple times)",
     )]
     pub skip: Vec<String>,
