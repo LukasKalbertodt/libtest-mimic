@@ -9,7 +9,6 @@ Write your own test harness that looks and behaves like the built-in test harnes
 This is a simple and small testing framework that mimics the original `libtest`.
 That means: all output looks pretty much like `cargo test` and most CLI arguments are understood and used.
 With that plumbing work out of the way, your test runner can focus on the actual testing.
-(MSRV: 1.60)
 
 See [**the documentation**](https://docs.rs/libtest-mimic) or [the `examples/` folder](/examples) for more information.
 
