@@ -46,6 +46,10 @@ pub struct Arguments {
     #[arg(long = "nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
     pub nocapture: bool,
 
+    /// No-op, ignored (libtest-mimic doesn't support this)
+    #[arg(long = "show-output")]
+    pub show_output: bool,
+
     /// Enable nightly-only flags
     #[arg(short = 'Z')]
     pub unstable_flags: Option<UnstableFlags>,
