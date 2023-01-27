@@ -46,6 +46,10 @@ pub struct Arguments {
     #[arg(long = "nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
     pub nocapture: bool,
 
+    /// Enable nightly-only flags
+    #[arg(short = 'Z')]
+    pub unstable_flags: Option<UnstableFlags>,
+
     /// If set, filters are matched exactly rather than by substring.
     #[arg(
         long = "exact",
@@ -166,6 +170,13 @@ impl Default for ColorSetting {
     fn default() -> Self {
         ColorSetting::Auto
     }
+}
+
+/// Possible values for the `-Z` option
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum UnstableFlags {
+    /// Allow use of experimental features
+    UnstableOptions,
 }
 
 /// Possible values for the `--format` option.
