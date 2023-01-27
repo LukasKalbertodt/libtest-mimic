@@ -7,6 +7,7 @@
 //! - `logfile`
 
 use std::{fs::File, time::Duration};
+use std::borrow::Cow;
 
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
@@ -136,7 +137,7 @@ impl Printer {
                 let c = match outcome {
                     Outcome::Passed => '.',
                     Outcome::Failed { .. } => 'F',
-                    Outcome::Ignored => 'i',
+                    Outcome::Ignored(_) => 'i',
                     Outcome::Measured { .. } => {
                         // Benchmark are never printed in terse mode... for
                         // some reason.
@@ -245,10 +246,11 @@ impl Printer {
     /// Prints a colored 'ok'/'FAILED'/'ignored'/'bench'.
     fn print_outcome_pretty(&mut self, outcome: &Outcome) {
         let s = match outcome {
-            Outcome::Passed => "ok",
-            Outcome::Failed { .. } => "FAILED",
-            Outcome::Ignored => "ignored",
-            Outcome::Measured { .. } => "bench",
+            Outcome::Passed => Cow::Borrowed("ok"),
+            Outcome::Failed { .. } => Cow::Borrowed("FAILED"),
+            Outcome::Ignored(Some(message)) => Cow::Owned(format!("ignored, {message}")),
+            Outcome::Ignored(None) => Cow::Borrowed("ignored"),
+            Outcome::Measured { .. } => Cow::Borrowed("bench"),
         };
 
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -284,7 +286,7 @@ fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
     let color = match outcome {
         Outcome::Passed => Color::Green,
         Outcome::Failed { .. } => Color::Red,
-        Outcome::Ignored => Color::Yellow,
+        Outcome::Ignored(_) => Color::Yellow,
         Outcome::Measured { .. } => Color::Cyan,
     };
     out.set_fg(Some(color));

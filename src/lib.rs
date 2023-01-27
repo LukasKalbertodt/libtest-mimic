@@ -115,6 +115,7 @@ impl Trial {
                 name: name.into(),
                 kind: String::new(),
                 is_ignored: false,
+                ignored_message: None,
                 is_bench: false,
             },
         }
@@ -148,6 +149,7 @@ impl Trial {
                 name: name.into(),
                 kind: String::new(),
                 is_ignored: false,
+                ignored_message: None,
                 is_bench: true,
             },
         }
@@ -178,6 +180,25 @@ impl Trial {
         Self {
             info: TestInfo {
                 is_ignored,
+                ..self.info
+            },
+            ..self
+        }
+    }
+
+    /// Sets the ignore message to use, if this test ends up being ignored.
+    ///
+    /// With the built-in test suite, you can annotate `#[ignore = "message"]` on tests to
+    /// explain why they aren't ran (for example to link to an issue explaining why it's ignored).
+    ///
+    /// This has no effect if the test is actually ran, either because it wasn't set as ignored
+    /// or was ran anyway with `--ignored` flag.
+    ///
+    /// Default value is `None`, which means no specific message is included.
+    pub fn with_ignored_message(self, ignored_message: Option<String>) -> Self {
+        Self {
+            info: TestInfo {
+                ignored_message,
                 ..self.info
             },
             ..self
@@ -235,6 +256,7 @@ struct TestInfo {
     name: String,
     kind: String,
     is_ignored: bool,
+    ignored_message: Option<String>,
     is_bench: bool,
 }
 
@@ -288,8 +310,8 @@ enum Outcome {
     /// The test or benchmark failed.
     Failed(Failed),
 
-    /// The test or benchmark was ignored.
-    Ignored,
+    /// The test or benchmark was ignored, with an optional reason why.
+    Ignored(Option<String>),
 
     /// The benchmark was successfully run.
     Measured(Measurement),
@@ -433,7 +455,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
                 failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
             },
-            Outcome::Ignored => conclusion.num_ignored += 1,
+            Outcome::Ignored(_) => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
         }
     };
@@ -447,7 +469,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             // the same line.
             printer.print_test(&test.info);
             let outcome = if args.is_ignored(&test) {
-                Outcome::Ignored
+                Outcome::Ignored(test.info.ignored_message.clone())
             } else {
                 run_single(test.runner, test_mode)
             };
@@ -461,7 +483,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
         let num_tests = tests.len();
         for test in tests {
             if args.is_ignored(&test) {
-                sender.send((Outcome::Ignored, test.info)).unwrap();
+                sender.send((Outcome::Ignored(test.info.ignored_message.clone()), test.info)).unwrap();
             } else {
                 let sender = sender.clone();
                 pool.execute(move || {
