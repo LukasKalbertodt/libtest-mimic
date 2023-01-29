@@ -79,14 +79,25 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
     }
 }
 
-/// Like `assert_eq`, but cleans the expected string (removes indendation).
+/// Like `assert_eq`, but cleans the expected string (removes indendation). Also
+/// normalizes the "finished in" time if `$expected` ends with "finished in
+/// 0.00s".
 #[macro_export]
 macro_rules! assert_log {
     ($actual:expr, $expected:expr) => {
-        let actual = $actual;
+        let mut actual = $actual.trim().to_owned();
         let expected = crate::common::clean_expected_log($expected);
+        let expected = expected.trim();
 
-        assert_eq!(actual.trim(), expected.trim());
+        if expected.ends_with("finished in 0.00s") {
+            // If we don't find that pattern, the assert below will fail anyway.
+            if let Some(pos) = actual.rfind("finished in") {
+                actual.truncate(pos);
+                actual.push_str("finished in 0.00s");
+            }
+        }
+
+        assert_eq!(actual, expected);
     };
 }
 
