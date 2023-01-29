@@ -69,6 +69,8 @@
 //!
 //! [capture]: https://github.com/LukasKalbertodt/libtest-mimic/issues/9
 
+#![forbid(unsafe_code)]
+
 use std::{process, sync::mpsc, fmt, time::Instant};
 
 mod args;
