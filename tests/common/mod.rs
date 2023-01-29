@@ -27,6 +27,8 @@ pub fn do_run(mut args: Arguments, tests: Vec<Trial>) -> (Conclusion, String) {
     (c, output)
 }
 
+/// Removes shared indentation so that at least one line has no indentation
+/// (no leading spaces).
 pub fn clean_expected_log(s: &str) -> String {
     let shared_indent = s.lines()
         .filter(|l| l.contains(|c| c != ' '))
