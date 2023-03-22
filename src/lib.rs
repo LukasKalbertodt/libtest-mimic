@@ -240,6 +240,16 @@ struct TestInfo {
     is_bench: bool,
 }
 
+impl TestInfo {
+    fn test_name_with_kind(&self) -> Cow<'_, str> {
+        if self.kind.is_empty() {
+            Cow::Borrowed(&self.name)
+        } else {
+            Cow::Owned(format!("[{}] {}", self.kind, self.name))
+        }
+    }
+}
+
 /// Output of a benchmark.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Measurement {
@@ -364,7 +374,13 @@ impl Arguments {
     }
 
     fn is_filtered_out(&self, test: &Trial) -> bool {
-        let test_name = &test.info.name;
+        // Match against the full test name, including the kind. This upholds the invariant that if
+        // --list prints out:
+        //
+        // <some string>: test
+        //
+        // then "--exact <some string>" runs exactly that test.
+        let test_name_with_kind = test.info.test_name_with_kind();
 
         // If a filter was specified, apply this
         if let Some(filter) = &self.filter {
@@ -378,8 +394,8 @@ impl Arguments {
         // If any skip pattern were specified, test for all patterns.
         for skip_filter in &self.skip {
             match self.exact {
-                true if test_name == skip_filter => return true,
-                false if test_name.contains(skip_filter) => return true,
+                true if &test_name_with_kind == skip_filter => return true,
+                false if test_name_with_kind.contains(skip_filter) => return true,
                 _ => {}
             }
         }
