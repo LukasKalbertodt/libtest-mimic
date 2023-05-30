@@ -457,7 +457,10 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
         }
     } else {
         // Run test in thread pool.
-        let pool = ThreadPool::default();
+        let pool = match args.test_threads {
+            Some(num_tests) => ThreadPool::new(num_tests),
+            None => ThreadPool::default()
+        };
         let (sender, receiver) = mpsc::channel();
 
         let num_tests = tests.len();
