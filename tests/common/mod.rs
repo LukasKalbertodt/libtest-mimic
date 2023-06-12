@@ -97,6 +97,11 @@ macro_rules! assert_log {
             }
         }
 
+        if let Some(pos) = actual.rfind("\"exec_time\":") {
+            actual.truncate(pos);
+            actual.push_str("\"exec_time\": 0.000000000 }");
+        }
+
         assert_eq!(actual, expected);
     };
 }
