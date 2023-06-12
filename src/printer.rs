@@ -92,6 +92,12 @@ impl Printer {
                 writeln!(self.out).unwrap();
                 writeln!(self.out, "running {} test{}", num_tests, plural_s).unwrap();
             }
+            FormatSetting::Json => writeln!(
+                self.out,
+                "{{ \"type\": \"suite\", \"event\": \"started\", \"test_count\": {} }}",
+                num_tests
+            )
+            .unwrap(),
         }
     }
 
@@ -121,12 +127,20 @@ impl Printer {
                 // In terse mode, nothing is printed before the job. Only
                 // `print_single_outcome` prints one character.
             }
+            FormatSetting::Json => {
+                writeln!(
+                    self.out,
+                    "{{ \"type\": \"test\", \"event\": \"started\", \"name\": \"{}\" }}",
+                    name
+                )
+                .unwrap();
+            }
         }
     }
 
     /// Prints the outcome of a single tests. `ok` or `FAILED` in pretty mode
     /// and `.` or `F` in terse mode.
-    pub(crate) fn print_single_outcome(&mut self, outcome: &Outcome) {
+    pub(crate) fn print_single_outcome(&mut self, info: &TestInfo, outcome: &Outcome) {
         match self.format {
             FormatSetting::Pretty => {
                 self.print_outcome_pretty(outcome);
@@ -149,6 +163,34 @@ impl Printer {
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
                 write!(self.out, "{}", c).unwrap();
                 self.out.reset().unwrap();
+            }
+            FormatSetting::Json => {
+                if let Outcome::Measured(Measurement { avg, variance }) = outcome {
+                    writeln!(
+                        self.out,
+                        r#"{{ "type": "bench", "name": "{}", "median": {}, "deviation": {} }}"#,
+                        info.name, avg, variance
+                    )
+                    .unwrap();
+                } else {
+                    writeln!(
+                        self.out,
+                        r#"{{ "type": "test", "name": "{}", "event": "{}"{} }}"#,
+                        info.name,
+                        match outcome {
+                            Outcome::Passed => "ok",
+                            Outcome::Failed(_) => "failed",
+                            Outcome::Ignored => "ignored",
+                            Outcome::Measured(_) => unreachable!(),
+                        },
+                        match outcome {
+                            Outcome::Failed(Failed { msg: Some(msg) }) =>
+                                format!(r#", "stdout": "Error: \"{}\"\n""#, msg.escape_default()),
+                            _ => "".into(),
+                        }
+                    )
+                    .unwrap();
+                }
             }
         }
     }
@@ -178,6 +220,20 @@ impl Printer {
                     execution_time.as_secs_f64()
                 ).unwrap();
                 writeln!(self.out).unwrap();
+            }
+            FormatSetting::Json => {
+                writeln!(
+                    self.out,
+                    "{{ \"type\": \"suite\", \"event\": \"{}\", \"passed\": {}, \"failed\": {}, \"ignored\": {}, \"measured\": {}, \"filtered_out\": {}, \"exec_time\": {} }}",
+                    if conclusion.num_failed > 0 { "failed" } else { "ok" },
+                    conclusion.num_passed,
+                    conclusion.num_failed,
+                    conclusion.num_ignored,
+                    conclusion.num_measured,
+                    conclusion.num_filtered_out,
+                    execution_time.as_secs_f64()
+                )
+                .unwrap();
             }
         }
     }
@@ -221,6 +277,9 @@ impl Printer {
     /// Prints a list of failed tests with their messages. This is only called
     /// if there were any failures.
     pub(crate) fn print_failures(&mut self, fails: &[(TestInfo, Option<String>)]) {
+        if self.format == FormatSetting::Json {
+            return;
+        }
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
         writeln!(self.out).unwrap();

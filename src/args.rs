@@ -112,7 +112,8 @@ pub struct Arguments {
         value_name = "pretty|terse|json",
         help = "Configure formatting of output: \n\
             - pretty = Print verbose output\n\
-            - terse = Display one character per test\n",
+            - terse = Display one character per test\n\
+            - json = Print json events\n",
     )]
     pub format: Option<FormatSetting>,
 
@@ -176,6 +177,9 @@ pub enum FormatSetting {
 
     /// One character per test. Usefull for test suites with many tests.
     Terse,
+
+    /// Json output
+    Json,
 }
 
 impl Default for FormatSetting {

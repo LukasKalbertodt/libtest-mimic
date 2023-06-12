@@ -426,7 +426,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     let mut failed_tests = Vec::new();
     let mut handle_outcome = |outcome: Outcome, test: TestInfo, printer: &mut Printer| {
-        printer.print_single_outcome(&outcome);
+        printer.print_single_outcome(&test, &outcome);
 
         // Handle outcome
         match outcome {

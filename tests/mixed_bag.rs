@@ -527,3 +527,56 @@ fn terse_output() {
             finished in 0.00s
     ");
 }
+
+#[test]
+fn json_output() {
+    let (c, out) = do_run(args(["--format", "json", "--test-threads", "1"]), tests());
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 4,
+            num_failed: 4,
+            num_ignored: 8,
+            num_measured: 0,
+        }
+    );
+
+    assert_log!(
+        out,
+        r#"{ "type": "suite", "event": "started", "test_count": 16 }
+{ "type": "test", "event": "started", "name": "cat" }
+{ "type": "test", "name": "cat", "event": "ok" }
+{ "type": "test", "event": "started", "name": "dog" }
+{ "type": "test", "name": "dog", "event": "failed", "stdout": "Error: \"was not a good boy\"\n" }
+{ "type": "test", "event": "started", "name": "fox" }
+{ "type": "test", "name": "fox", "event": "ok" }
+{ "type": "test", "event": "started", "name": "bunny" }
+{ "type": "test", "name": "bunny", "event": "failed", "stdout": "Error: \"jumped too high\"\n" }
+{ "type": "test", "event": "started", "name": "frog" }
+{ "type": "test", "name": "frog", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "owl" }
+{ "type": "test", "name": "owl", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "fly" }
+{ "type": "test", "name": "fly", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "bear" }
+{ "type": "test", "name": "bear", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "red" }
+{ "type": "test", "name": "red", "event": "ok" }
+{ "type": "test", "event": "started", "name": "blue" }
+{ "type": "test", "name": "blue", "event": "failed", "stdout": "Error: \"sky fell down\"\n" }
+{ "type": "test", "event": "started", "name": "yellow" }
+{ "type": "test", "name": "yellow", "event": "ok" }
+{ "type": "test", "event": "started", "name": "green" }
+{ "type": "test", "name": "green", "event": "failed", "stdout": "Error: \"was poisoned\"\n" }
+{ "type": "test", "event": "started", "name": "purple" }
+{ "type": "test", "name": "purple", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "cyan" }
+{ "type": "test", "name": "cyan", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "orange" }
+{ "type": "test", "name": "orange", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "pink" }
+{ "type": "test", "name": "pink", "event": "ignored" }
+{ "type": "suite", "event": "failed", "passed": 4, "failed": 4, "ignored": 8, "measured": 0, "filtered_out": 0, "exec_time": 0.000000000 }"#
+    );
+}
