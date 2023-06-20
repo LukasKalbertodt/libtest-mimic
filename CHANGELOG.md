@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.6.1] - 2022-11-05
+### Fixed
+- Actually spawn as many threads as specified by `--test-threads` (thanks @hgzimmerman) in [#32](https://github.com/LukasKalbertodt/libtest-mimic/pull/32).
+- Fix & improve docs
+- Fix badge in README
+
+### Changed
+- Deemphasize MSRV by removing check and note from README in [#24](https://github.com/LukasKalbertodt/libtest-mimic/pull/24).
+
+
 ## [0.6.0] - 2022-11-05
 ### Changed
 - **Breaking**: Updated `clap` to version 4 (thanks @msrd0)
