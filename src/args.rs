@@ -46,6 +46,14 @@ pub struct Arguments {
     #[arg(long = "nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
     pub nocapture: bool,
 
+    /// No-op, ignored. libtest-mimic does not currently capture stdout.
+    #[arg(long = "show-output")]
+    pub show_output: bool,
+
+    /// No-op, ignored. Flag only exists for CLI compatibility with libtest.
+    #[arg(short = 'Z')]
+    pub unstable_flags: Option<UnstableFlags>,
+
     /// If set, filters are matched exactly rather than by substring.
     #[arg(
         long = "exact",
@@ -167,6 +175,12 @@ impl Default for ColorSetting {
     fn default() -> Self {
         ColorSetting::Auto
     }
+}
+
+/// Possible values for the `-Z` option
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum UnstableFlags {
+    UnstableOptions,
 }
 
 /// Possible values for the `--format` option.
