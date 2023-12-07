@@ -18,9 +18,13 @@ readme = "README.md"
 
 exclude = [".github"]
 
+[features]
+default = ["multithreaded"]
+multithreaded = ["dep:threadpool"]
+
 [dependencies]
 clap = { version = "4.0.8", features = ["derive"] }
-threadpool = "1.8.1"
+threadpool = { version = "1.8.1", optional = true}
 termcolor = "1.0.5"
 
 [dev-dependencies]

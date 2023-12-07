@@ -12,9 +12,7 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug, Clone, Default)]
 #[command(
     help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
-    disable_version_flag = true,
-    after_help = "By default, all tests are run in parallel. This can be altered with the \n\
-        --test-threads flag when running tests (set it to 1).",
+    disable_version_flag = true
 )]
 pub struct Arguments {
     // ============== FLAGS ===================================================
@@ -30,7 +28,7 @@ pub struct Arguments {
     #[arg(
         long = "test",
         conflicts_with = "bench",
-        help = "Run tests and not benchmarks",
+        help = "Run tests and not benchmarks"
     )]
     pub test: bool,
 
@@ -43,7 +41,10 @@ pub struct Arguments {
     pub list: bool,
 
     /// No-op, ignored (libtest-mimic always runs in no-capture mode)
-    #[arg(long = "nocapture", help = "No-op (libtest-mimic always runs in no-capture mode)")]
+    #[arg(
+        long = "nocapture",
+        help = "No-op (libtest-mimic always runs in no-capture mode)"
+    )]
     pub nocapture: bool,
 
     /// No-op, ignored. libtest-mimic does not currently capture stdout.
@@ -57,7 +58,7 @@ pub struct Arguments {
     /// If set, filters are matched exactly rather than by substring.
     #[arg(
         long = "exact",
-        help = "Exactly match filters rather than by substring",
+        help = "Exactly match filters rather than by substring"
     )]
     pub exact: bool,
 
@@ -70,16 +71,17 @@ pub struct Arguments {
         short = 'q',
         long = "quiet",
         conflicts_with = "format",
-        help = "Display one character per test instead of one line. Alias to --format=terse",
+        help = "Display one character per test instead of one line. Alias to --format=terse"
     )]
     pub quiet: bool,
 
     // ============== OPTIONS =================================================
+    #[cfg(feature = "multithreaded")]
     /// Number of threads used for parallel testing.
     #[arg(
         long = "test-threads",
-        help = "Number of threads used for running tests in parallel. If set to 1, \n\
-            all tests are run in the main thread.",
+        help = "Number of threads used for running tests in parallel. By default, all tests are run in parallel. If set to 1, \n\
+            all tests are run in the main thread."
     )]
     pub test_threads: Option<usize>,
 
@@ -88,7 +90,7 @@ pub struct Arguments {
     #[arg(
         long = "logfile",
         value_name = "PATH",
-        help = "Write logs to the specified file instead of stdout",
+        help = "Write logs to the specified file instead of stdout"
     )]
     pub logfile: Option<String>,
 
@@ -97,7 +99,7 @@ pub struct Arguments {
     #[arg(
         long = "skip",
         value_name = "FILTER",
-        help = "Skip tests whose names contain FILTER (this flag can be used multiple times)",
+        help = "Skip tests whose names contain FILTER (this flag can be used multiple times)"
     )]
     pub skip: Vec<String>,
 
@@ -109,7 +111,7 @@ pub struct Arguments {
         help = "Configure coloring of output: \n\
             - auto = colorize if stdout is a tty and tests are run on serially (default)\n\
             - always = always colorize output\n\
-            - never = never colorize output\n",
+            - never = never colorize output\n"
     )]
     pub color: Option<ColorSetting>,
 
@@ -121,7 +123,7 @@ pub struct Arguments {
         help = "Configure formatting of output: \n\
             - pretty = Print verbose output\n\
             - terse = Display one character per test\n\
-            - json = Print json events\n",
+            - json = Print json events\n"
     )]
     pub format: Option<FormatSetting>,
 
@@ -130,7 +132,7 @@ pub struct Arguments {
     #[arg(
         value_name = "FILTER",
         help = "The FILTER string is tested against the name of all tests, and only those tests \
-                whose names contain the filter are run.",
+                whose names contain the filter are run."
     )]
     pub filter: Option<String>,
 }
