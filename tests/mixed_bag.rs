@@ -274,7 +274,17 @@ fn list_with_filter_exact() {
     });
 
     // --skip --exact can be used to exclude tests.
-    let (c, out) = common::do_run(args(["--list", "--exact", "--skip", "[apple] fox", "--skip", "fly"]), tests());
+    let (c, out) = common::do_run(
+        args([
+            "--list",
+            "--exact",
+            "--skip",
+            "[apple] fox",
+            "--skip",
+            "fly",
+        ]),
+        tests(),
+    );
     assert_log!(out, "
         cat: test
         dog: test

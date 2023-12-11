@@ -401,7 +401,9 @@ impl Arguments {
                 // For exact matches, we want to match against either the test name (to maintain
                 // backwards compatibility with older versions of libtest-mimic), or the test kind
                 // (technically more correct with respect to matching against the output of --list.)
-                true if test_name == skip_filter || &test_name_with_kind == skip_filter => return true,
+                true if test_name == skip_filter || &test_name_with_kind == skip_filter => {
+                    return true
+                }
                 false if test_name_with_kind.contains(skip_filter) => return true,
                 _ => {}
             }
