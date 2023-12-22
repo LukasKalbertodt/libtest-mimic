@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- JSON Format Output [#34](https://github.com/LukasKalbertodt/libtest-mimic/pull/34)
+- No-Op Commandline Options to satisfy intellij IDEs [#34](https://github.com/LukasKalbertodt/libtest-mimic/pull/34)
+
+### Changed
+- Gate multi-threaded execution behind a enabled-by-default feature [#34](https://github.com/LukasKalbertodt/libtest-mimic/pull/34)
+
 
 ## [0.6.1] - 2022-11-05
 ### Fixed
