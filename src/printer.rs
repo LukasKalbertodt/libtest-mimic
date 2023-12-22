@@ -11,8 +11,8 @@ use std::{fs::File, time::Duration};
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use crate::{
-    Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Trial, Failed,
-    Measurement, TestInfo,
+    Arguments, ColorSetting, Conclusion, Failed, FormatSetting, Measurement, Outcome, TestInfo,
+    Trial,
 };
 
 pub(crate) struct Printer {
@@ -58,12 +58,14 @@ impl Printer {
         // test names and outcomes. Counting the number of code points is just
         // a cheap way that works in most cases. Usually, these names are
         // ASCII.
-        let name_width = tests.iter()
+        let name_width = tests
+            .iter()
             .map(|test| test.info.name.chars().count())
             .max()
             .unwrap_or(0);
 
-        let kind_width = tests.iter()
+        let kind_width = tests
+            .iter()
             .map(|test| {
                 if test.info.kind.is_empty() {
                     0
@@ -94,7 +96,7 @@ impl Printer {
             }
             FormatSetting::Json => writeln!(
                 self.out,
-                "{{ \"type\": \"suite\", \"event\": \"started\", \"test_count\": {} }}",
+                r#"{{ "type": "suite", "event": "started", "test_count": {} }}"#,
                 num_tests
             )
             .unwrap(),
@@ -108,7 +110,7 @@ impl Printer {
         match self.format {
             FormatSetting::Pretty => {
                 let kind = if kind.is_empty() {
-                    format!("")
+                    String::new()
                 } else {
                     format!("[{}] ", kind)
                 };
@@ -116,11 +118,9 @@ impl Printer {
                 write!(
                     self.out,
                     "test {: <2$}{: <3$} ... ",
-                    kind,
-                    name,
-                    self.kind_width,
-                    self.name_width,
-                ).unwrap();
+                    kind, name, self.kind_width, self.name_width,
+                )
+                .unwrap();
                 self.out.flush().unwrap();
             }
             FormatSetting::Terse => {
@@ -130,8 +130,8 @@ impl Printer {
             FormatSetting::Json => {
                 writeln!(
                     self.out,
-                    "{{ \"type\": \"test\", \"event\": \"started\", \"name\": \"{}\" }}",
-                    name
+                    r#"{{ "type": "test", "event": "started", "name": "{}" }}"#,
+                    escape8259::escape(name)
                 )
                 .unwrap();
             }
@@ -169,14 +169,16 @@ impl Printer {
                     writeln!(
                         self.out,
                         r#"{{ "type": "bench", "name": "{}", "median": {}, "deviation": {} }}"#,
-                        info.name, avg, variance
+                        escape8259::escape(&info.name),
+                        avg,
+                        variance
                     )
                     .unwrap();
                 } else {
                     writeln!(
                         self.out,
                         r#"{{ "type": "test", "name": "{}", "event": "{}"{} }}"#,
-                        info.name,
+                        escape8259::escape(&info.name),
                         match outcome {
                             Outcome::Passed => "ok",
                             Outcome::Failed(_) => "failed",
@@ -185,7 +187,7 @@ impl Printer {
                         },
                         match outcome {
                             Outcome::Failed(Failed { msg: Some(msg) }) =>
-                                format!(r#", "stdout": "Error: \"{}\"\n""#, msg.escape_default()),
+                                format!(r#", "stdout": "Error: \"{}\"\n""#, escape8259::escape(msg)),
                             _ => "".into(),
                         }
                     )
@@ -218,13 +220,14 @@ impl Printer {
                     conclusion.num_measured,
                     conclusion.num_filtered_out,
                     execution_time.as_secs_f64()
-                ).unwrap();
+                )
+                .unwrap();
                 writeln!(self.out).unwrap();
             }
             FormatSetting::Json => {
                 writeln!(
                     self.out,
-                    "{{ \"type\": \"suite\", \"event\": \"{}\", \"passed\": {}, \"failed\": {}, \"ignored\": {}, \"measured\": {}, \"filtered_out\": {}, \"exec_time\": {} }}",
+                    r#"{{ "type": "suite", "event": "{}", "passed": {}, "failed": {}, "ignored": {}, "measured": {}, "filtered_out": {}, "exec_time": {} }}"#,
                     if conclusion.num_failed > 0 { "failed" } else { "ok" },
                     conclusion.num_passed,
                     conclusion.num_failed,
@@ -257,7 +260,7 @@ impl Printer {
             }
 
             let kind = if test.info.kind.is_empty() {
-                format!("")
+                String::new()
             } else {
                 format!("[{}] ", test.info.kind)
             };
@@ -320,7 +323,8 @@ impl Printer {
                 ": {:>11} ns/iter (+/- {})",
                 fmt_with_thousand_sep(*avg),
                 fmt_with_thousand_sep(*variance),
-            ).unwrap();
+            )
+            .unwrap();
         }
     }
 }

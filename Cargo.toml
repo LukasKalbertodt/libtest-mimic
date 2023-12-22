@@ -26,6 +26,7 @@ multithreaded = ["dep:threadpool"]
 clap = { version = "4.0.8", features = ["derive"] }
 threadpool = { version = "1.8.1", optional = true}
 termcolor = "1.0.5"
+escape8259 = "0.5.2"
 
 [dev-dependencies]
 fastrand = "1.8.0"
