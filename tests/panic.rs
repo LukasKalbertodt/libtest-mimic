@@ -4,7 +4,7 @@ use libtest_mimic::{Conclusion, Trial};
 #[macro_use]
 mod common;
 
-fn tests() -> Vec<Trial> {
+fn tests() -> Vec<Trial<'static>> {
     vec![
         Trial::test("passes", || Ok(())),
         Trial::test("panics", || panic!("uh oh")),

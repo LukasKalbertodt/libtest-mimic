@@ -5,7 +5,7 @@ use pretty_assertions::assert_eq;
 #[macro_use]
 mod common;
 
-fn tests() -> Vec<Trial> {
+fn tests() -> Vec<Trial<'static>> {
     fn meas(avg: u64, variance: u64) -> Option<Measurement> {
         Some(Measurement { avg, variance })
     }

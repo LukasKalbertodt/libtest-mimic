@@ -7,7 +7,7 @@ use crate::common::do_run;
 #[macro_use]
 mod common;
 
-fn tests() -> Vec<Trial> {
+fn tests() -> Vec<Trial<'static>> {
     vec![
         Trial::test("foo", || Ok(())),
         Trial::test("bar", || Ok(())),

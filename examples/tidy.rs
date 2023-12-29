@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 /// Creates one test for each `.rs` file in the current directory or
 /// sub-directories of the current directory.
-fn collect_tests() -> Result<Vec<Trial>, Box<dyn Error>> {
+fn collect_tests() -> Result<Vec<Trial<'static>>, Box<dyn Error>> {
     fn visit_dir(path: &Path, tests: &mut Vec<Trial>) -> Result<(), Box<dyn Error>> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;

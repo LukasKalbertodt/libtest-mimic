@@ -91,15 +91,15 @@ pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 /// the trial is considered "failed". If you need the behavior of
 /// `#[should_panic]` you need to catch the panic yourself. You likely want to
 /// compare the panic payload to an expected value anyway.
-pub struct Trial {
+pub struct Trial<'a> {
     #[cfg(feature = "multithreaded")]
-    runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
+    runner: Box<dyn FnOnce(bool) -> Outcome + Send + 'a>,
     #[cfg(not(feature = "multithreaded"))]
-    runner: Box<dyn FnOnce(bool) -> Outcome>,
+    runner: Box<dyn FnOnce(bool) -> Outcome + 'a>,
     info: TestInfo,
 }
 
-impl Trial {
+impl<'a> Trial<'a> {
     /// Creates a (non-benchmark) test with the given name and runner.
     ///
     /// The runner returning `Ok(())` is interpreted as the test passing. If the
@@ -107,7 +107,7 @@ impl Trial {
     #[cfg(feature = "multithreaded")]
     pub fn test<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce() -> Result<(), Failed> + Send + 'static,
+        R: FnOnce() -> Result<(), Failed> + Send + 'a,
     {
         Self {
             runner: Box::new(move |_test_mode| match runner() {
@@ -130,7 +130,7 @@ impl Trial {
     #[cfg(not(feature = "multithreaded"))]
     pub fn test<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce() -> Result<(), Failed> + 'static,
+        R: FnOnce() -> Result<(), Failed> + 'a,
     {
         Self {
             runner: Box::new(move |_test_mode| match runner() {
@@ -161,7 +161,7 @@ impl Trial {
     #[cfg(feature = "multithreaded")]
     pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + Send + 'static,
+        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + Send + 'a,
     {
         Self {
             runner: Box::new(move |test_mode| match runner(test_mode) {
@@ -196,7 +196,7 @@ impl Trial {
     #[cfg(not(feature = "multithreaded"))]
     pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + 'static,
+        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + 'a,
     {
         Self {
             runner: Box::new(move |test_mode| match runner(test_mode) {
@@ -274,7 +274,7 @@ impl Trial {
     }
 }
 
-impl fmt::Debug for Trial {
+impl<'a> fmt::Debug for Trial<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct OpaqueRunner;
         impl fmt::Debug for OpaqueRunner {
@@ -451,6 +451,34 @@ impl Arguments {
     }
 }
 
+#[cfg(feature = "multithreaded")]
+type Task<'a> = Box<dyn FnOnce() + Send + 'a>;
+
+#[cfg(feature = "multithreaded")]
+fn create_thread_pool<'a, F>(max_threads: Option<usize>, task_generator: F)
+where
+    F: FnOnce(crossbeam::channel::Sender<Task<'a>>) + 'a,
+{
+    use crossbeam::channel::bounded; //multi-producer, multi-consumer queue
+
+    let num_threads = max_threads.unwrap_or_else(num_cpus::get);
+
+    std::thread::scope(|scope| {
+        let (sender, receiver) = bounded::<Task>(num_threads);
+
+        for _ in 0..num_threads {
+            let rx = receiver.clone();
+            scope.spawn(move || {
+                for task in rx.iter() {
+                    task();
+                }
+            });
+        }
+
+        task_generator(sender);
+    })
+}
+
 /// Runs all given trials (tests & benchmarks).
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -521,40 +549,37 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     #[cfg(feature = "multithreaded")]
     {
         use std::sync::mpsc;
-        use threadpool::ThreadPool;
+
         if args.test_threads == Some(1) {
             sequentially(tests);
         } else {
-            // Run test in thread pool.
-            let pool = match args.test_threads {
-                Some(num_threads) => ThreadPool::new(num_threads),
-                None => ThreadPool::default(),
-            };
-            let (sender, receiver) = mpsc::channel();
-
-            let num_tests = tests.len();
-            for test in tests {
-                if args.is_ignored(&test) {
-                    sender.send((Outcome::Ignored, test.info)).unwrap();
-                } else {
-                    let sender = sender.clone();
-                    pool.execute(move || {
+            // Run test in scoped thread pool.
+            create_thread_pool(args.test_threads, |task_sender| {
+                let (outcome_sender, outcome_receiver) = mpsc::channel();
+                let num_tests = tests.len();
+                for test in tests {
+                    if args.is_ignored(&test) {
+                        outcome_sender.send((Outcome::Ignored, test.info)).unwrap();
+                    } else {
+                        let outcome_sender = outcome_sender.clone();
                         // It's fine to ignore the result of sending. If the
                         // receiver has hung up, everything will wind down soon
                         // anyway.
-                        let outcome = run_single(test.runner, test_mode);
-                        let _ = sender.send((outcome, test.info));
-                    });
+                        let _ = task_sender.send(Box::new(move || {
+                            let outcome = run_single(test.runner, test_mode);
+                            let _ = outcome_sender.send((outcome, test.info));
+                        }));
+                    }
                 }
-            }
 
-            for (outcome, test_info) in receiver.iter().take(num_tests) {
-                // In multithreaded mode, we do only print the start of the line
-                // after the test ran, as otherwise it would lead to terribly
-                // interleaved output.
-                printer.print_test(&test_info);
-                handle_outcome(outcome, test_info, &mut printer);
-            }
+                for (outcome, test_info) in outcome_receiver.iter().take(num_tests) {
+                    // In multithreaded mode, we do only print the start of the line
+                    // after the test ran, as otherwise it would lead to terribly
+                    // interleaved output.
+                    printer.print_test(&test_info);
+                    handle_outcome(outcome, test_info, &mut printer);
+                }
+            });
         }
     };
 
@@ -569,9 +594,9 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 }
 
 /// Runs the given runner, catching any panics and treating them as a failed test.
-fn run_single(
-    #[cfg(feature = "multithreaded")] runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
-    #[cfg(not(feature = "multithreaded"))] runner: Box<dyn FnOnce(bool) -> Outcome>,
+fn run_single<'a>(
+    #[cfg(feature = "multithreaded")] runner: Box<dyn FnOnce(bool) -> Outcome + Send + 'a>,
+    #[cfg(not(feature = "multithreaded"))] runner: Box<dyn FnOnce(bool) -> Outcome + 'a>,
     test_mode: bool,
 ) -> Outcome {
     use std::panic::{catch_unwind, AssertUnwindSafe};

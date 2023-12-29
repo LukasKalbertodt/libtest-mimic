@@ -20,13 +20,14 @@ exclude = [".github"]
 
 [features]
 default = ["multithreaded"]
-multithreaded = ["dep:threadpool"]
+multithreaded = ["dep:crossbeam", "dep:num_cpus"]
 
 [dependencies]
 clap = { version = "4.0.8", features = ["derive"] }
-threadpool = { version = "1.8.1", optional = true }
 termcolor = "1.0.5"
 escape8259 = "0.5.2"
+crossbeam = { version = "0.8.3", optional = true }
+num_cpus = { version = "1.16.0", optional = true }
 
 [dev-dependencies]
 fastrand = "1.8.0"

@@ -115,9 +115,9 @@ macro_rules! assert_log {
     };
 }
 
-pub fn check(
+pub fn check<'a>(
     #[allow(unused_mut)] mut args: Arguments,
-    mut tests: impl FnMut() -> Vec<Trial>,
+    mut tests: impl FnMut() -> Vec<Trial<'a>>,
     #[allow(unused_variables)] num_running_tests: u64,
     expected_conclusion: Conclusion,
     expected_output: &str,
