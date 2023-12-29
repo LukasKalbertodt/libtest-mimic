@@ -1,15 +1,8 @@
 extern crate libtest_mimic;
 
-use libtest_mimic::{Arguments, Trial, Failed};
+use libtest_mimic::{Arguments, Failed, Trial};
 
-use std::{
-    env,
-    error::Error,
-    ffi::OsStr,
-    fs,
-    path::Path,
-};
-
+use std::{env, error::Error, ffi::OsStr, fs, path::Path};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Arguments::from_args();
@@ -19,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 /// Creates one test for each `.rs` file in the current directory or
 /// sub-directories of the current directory.
-fn collect_tests() -> Result<Vec<Trial>, Box<dyn Error>> {
+fn collect_tests() -> Result<Vec<Trial<'static>>, Box<dyn Error>> {
     fn visit_dir(path: &Path, tests: &mut Vec<Trial>) -> Result<(), Box<dyn Error>> {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -34,8 +27,7 @@ fn collect_tests() -> Result<Vec<Trial>, Box<dyn Error>> {
                         .display()
                         .to_string();
 
-                    let test = Trial::test(name, move || check_file(&path))
-                        .with_kind("tidy");
+                    let test = Trial::test(name, move || check_file(&path)).with_kind("tidy");
                     tests.push(test);
                 }
             } else if file_type.is_dir() {

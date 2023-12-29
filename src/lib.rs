@@ -71,17 +71,14 @@
 
 #![forbid(unsafe_code)]
 
-use std::{process, sync::mpsc, fmt, time::Instant};
+use std::{fmt, process, time::Instant};
 
 mod args;
 mod printer;
 
 use printer::Printer;
-use threadpool::ThreadPool;
 
 pub use crate::args::{Arguments, ColorSetting, FormatSetting};
-
-
 
 /// A single test or benchmark.
 ///
@@ -94,19 +91,46 @@ pub use crate::args::{Arguments, ColorSetting, FormatSetting};
 /// the trial is considered "failed". If you need the behavior of
 /// `#[should_panic]` you need to catch the panic yourself. You likely want to
 /// compare the panic payload to an expected value anyway.
-pub struct Trial {
-    runner: Box<dyn FnOnce(bool) -> Outcome + Send>,
+pub struct Trial<'a> {
+    #[cfg(feature = "multithreaded")]
+    runner: Box<dyn FnOnce(bool) -> Outcome + Send + 'a>,
+    #[cfg(not(feature = "multithreaded"))]
+    runner: Box<dyn FnOnce(bool) -> Outcome + 'a>,
     info: TestInfo,
 }
 
-impl Trial {
+impl<'a> Trial<'a> {
     /// Creates a (non-benchmark) test with the given name and runner.
     ///
     /// The runner returning `Ok(())` is interpreted as the test passing. If the
     /// runner returns `Err(_)`, the test is considered failed.
+    #[cfg(feature = "multithreaded")]
     pub fn test<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce() -> Result<(), Failed> + Send + 'static,
+        R: FnOnce() -> Result<(), Failed> + Send + 'a,
+    {
+        Self {
+            runner: Box::new(move |_test_mode| match runner() {
+                Ok(()) => Outcome::Passed,
+                Err(failed) => Outcome::Failed(failed),
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: false,
+            },
+        }
+    }
+
+    /// Creates a (non-benchmark) test with the given name and runner.
+    ///
+    /// The runner returning `Ok(())` is interpreted as the test passing. If the
+    /// runner returns `Err(_)`, the test is considered failed.
+    #[cfg(not(feature = "multithreaded"))]
+    pub fn test<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce() -> Result<(), Failed> + 'a,
     {
         Self {
             runner: Box::new(move |_test_mode| match runner() {
@@ -134,17 +158,54 @@ impl Trial {
     /// `test_mode` is `true` if neither `--bench` nor `--test` are set, and
     /// `false` when `--bench` is set. If `--test` is set, benchmarks are not
     /// ran at all, and both flags cannot be set at the same time.
+    #[cfg(feature = "multithreaded")]
     pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
     where
-        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + Send + 'static,
+        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + Send + 'a,
     {
         Self {
             runner: Box::new(move |test_mode| match runner(test_mode) {
                 Err(failed) => Outcome::Failed(failed),
                 Ok(_) if test_mode => Outcome::Passed,
                 Ok(Some(measurement)) => Outcome::Measured(measurement),
-                Ok(None)
-                    => Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into()),
+                Ok(None) => {
+                    Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into())
+                }
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: true,
+            },
+        }
+    }
+
+    /// Creates a benchmark with the given name and runner.
+    ///
+    /// If the runner's parameter `test_mode` is `true`, the runner function
+    /// should run all code just once, without measuring, just to make sure it
+    /// does not panic. If the parameter is `false`, it should perform the
+    /// actual benchmark. If `test_mode` is `true` you may return `Ok(None)`,
+    /// but if it's `false`, you have to return a `Measurement`, or else the
+    /// benchmark is considered a failure.
+    ///
+    /// `test_mode` is `true` if neither `--bench` nor `--test` are set, and
+    /// `false` when `--bench` is set. If `--test` is set, benchmarks are not
+    /// ran at all, and both flags cannot be set at the same time.
+    #[cfg(not(feature = "multithreaded"))]
+    pub fn bench<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce(bool) -> Result<Option<Measurement>, Failed> + 'a,
+    {
+        Self {
+            runner: Box::new(move |test_mode| match runner(test_mode) {
+                Err(failed) => Outcome::Failed(failed),
+                Ok(_) if test_mode => Outcome::Passed,
+                Ok(Some(measurement)) => Outcome::Measured(measurement),
+                Ok(None) => {
+                    Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into())
+                }
             }),
             info: TestInfo {
                 name: name.into(),
@@ -213,7 +274,7 @@ impl Trial {
     }
 }
 
-impl fmt::Debug for Trial {
+impl<'a> fmt::Debug for Trial<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct OpaqueRunner;
         impl fmt::Debug for OpaqueRunner {
@@ -274,12 +335,10 @@ impl Failed {
 impl<M: std::fmt::Display> From<M> for Failed {
     fn from(msg: M) -> Self {
         Self {
-            msg: Some(msg.to_string())
+            msg: Some(msg.to_string()),
         }
     }
 }
-
-
 
 /// The outcome of performing a test/benchmark.
 #[derive(Debug, Clone)]
@@ -392,6 +451,34 @@ impl Arguments {
     }
 }
 
+#[cfg(feature = "multithreaded")]
+type Task<'a> = Box<dyn FnOnce() + Send + 'a>;
+
+#[cfg(feature = "multithreaded")]
+fn create_thread_pool<'a, F>(max_threads: Option<usize>, task_generator: F)
+where
+    F: FnOnce(crossbeam::channel::Sender<Task<'a>>) + 'a,
+{
+    use crossbeam::channel::bounded; //multi-producer, multi-consumer queue
+
+    let num_threads = max_threads.unwrap_or_else(num_cpus::get);
+
+    std::thread::scope(|scope| {
+        let (sender, receiver) = bounded::<Task>(num_threads);
+
+        for _ in 0..num_threads {
+            let rx = receiver.clone();
+            scope.spawn(move || {
+                for task in rx.iter() {
+                    task();
+                }
+            });
+        }
+
+        task_generator(sender);
+    })
+}
+
 /// Runs all given trials (tests & benchmarks).
 ///
 /// This is the central function of this crate. It provides the framework for
@@ -403,7 +490,6 @@ impl Arguments {
 pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     let start_instant = Instant::now();
     let mut conclusion = Conclusion::empty();
-
     // Apply filtering
     if args.filter.is_some() || !args.skip.is_empty() || args.ignored {
         let len_before = tests.len() as u64;
@@ -426,7 +512,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     let mut failed_tests = Vec::new();
     let mut handle_outcome = |outcome: Outcome, test: TestInfo, printer: &mut Printer| {
-        printer.print_single_outcome(&outcome);
+        printer.print_single_outcome(&test, &outcome);
 
         // Handle outcome
         match outcome {
@@ -434,7 +520,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             Outcome::Failed(failed) => {
                 failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
-            },
+            }
             Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
         }
@@ -442,7 +528,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     // Execute all tests.
     let test_mode = !args.bench;
-    if args.test_threads == Some(1) {
+    let mut sequentially = |tests: Vec<Trial>| {
         // Run test sequentially in main thread
         for test in tests {
             // Print `test foo    ...`, run the test, then print the outcome in
@@ -455,38 +541,47 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             };
             handle_outcome(outcome, test.info, &mut printer);
         }
-    } else {
-        // Run test in thread pool.
-        let pool = match args.test_threads {
-            Some(num_threads) => ThreadPool::new(num_threads),
-            None => ThreadPool::default()
-        };
-        let (sender, receiver) = mpsc::channel();
+    };
 
-        let num_tests = tests.len();
-        for test in tests {
-            if args.is_ignored(&test) {
-                sender.send((Outcome::Ignored, test.info)).unwrap();
-            } else {
-                let sender = sender.clone();
-                pool.execute(move || {
-                    // It's fine to ignore the result of sending. If the
-                    // receiver has hung up, everything will wind down soon
-                    // anyway.
-                    let outcome = run_single(test.runner, test_mode);
-                    let _ = sender.send((outcome, test.info));
-                });
-            }
-        }
+    #[cfg(not(feature = "multithreaded"))]
+    sequentially(tests);
 
-        for (outcome, test_info) in receiver.iter().take(num_tests) {
-            // In multithreaded mode, we do only print the start of the line
-            // after the test ran, as otherwise it would lead to terribly
-            // interleaved output.
-            printer.print_test(&test_info);
-            handle_outcome(outcome, test_info, &mut printer);
+    #[cfg(feature = "multithreaded")]
+    {
+        use std::sync::mpsc;
+
+        if args.test_threads == Some(1) {
+            sequentially(tests);
+        } else {
+            // Run test in scoped thread pool.
+            create_thread_pool(args.test_threads, |task_sender| {
+                let (outcome_sender, outcome_receiver) = mpsc::channel();
+                let num_tests = tests.len();
+                for test in tests {
+                    if args.is_ignored(&test) {
+                        outcome_sender.send((Outcome::Ignored, test.info)).unwrap();
+                    } else {
+                        let outcome_sender = outcome_sender.clone();
+                        // It's fine to ignore the result of sending. If the
+                        // receiver has hung up, everything will wind down soon
+                        // anyway.
+                        let _ = task_sender.send(Box::new(move || {
+                            let outcome = run_single(test.runner, test_mode);
+                            let _ = outcome_sender.send((outcome, test.info));
+                        }));
+                    }
+                }
+
+                for (outcome, test_info) in outcome_receiver.iter().take(num_tests) {
+                    // In multithreaded mode, we do only print the start of the line
+                    // after the test ran, as otherwise it would lead to terribly
+                    // interleaved output.
+                    printer.print_test(&test_info);
+                    handle_outcome(outcome, test_info, &mut printer);
+                }
+            });
         }
-    }
+    };
 
     // Print failures if there were any, and the final summary.
     if !failed_tests.is_empty() {
@@ -499,14 +594,19 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 }
 
 /// Runs the given runner, catching any panics and treating them as a failed test.
-fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) -> Outcome {
+fn run_single<'a>(
+    #[cfg(feature = "multithreaded")] runner: Box<dyn FnOnce(bool) -> Outcome + Send + 'a>,
+    #[cfg(not(feature = "multithreaded"))] runner: Box<dyn FnOnce(bool) -> Outcome + 'a>,
+    test_mode: bool,
+) -> Outcome {
     use std::panic::{catch_unwind, AssertUnwindSafe};
 
     catch_unwind(AssertUnwindSafe(move || runner(test_mode))).unwrap_or_else(|e| {
         // The `panic` information is just an `Any` object representing the
         // value the panic was invoked with. For most panics (which use
         // `panic!` like `println!`), this is either `&str` or `String`.
-        let payload = e.downcast_ref::<String>()
+        let payload = e
+            .downcast_ref::<String>()
             .map(|s| s.as_str())
             .or(e.downcast_ref::<&str>().map(|s| *s));
 
