@@ -1,5 +1,5 @@
 use pretty_assertions::assert_eq;
-use std::{collections::HashMap, iter::repeat_with, path::Path};
+use std::{iter::repeat_with, path::Path};
 
 use libtest_mimic::{run, Arguments, Conclusion, Trial};
 
@@ -52,6 +52,7 @@ pub fn clean_expected_log(s: &str) -> String {
 
 /// Best effort tool to check certain things about a log that might have all
 /// tests randomly ordered.
+#[cfg(feature = "multithreaded")]
 pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tail: &str) {
     let actual = actual.trim();
     let (first_line, rest) = actual.split_once('\n').expect("log has too few lines");
@@ -62,6 +63,8 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
         &format!("running {} test{}", num, if num == 1 { "" } else { "s" })
     );
     assert!(last_line.contains(tail));
+
+    use std::collections::HashMap;
 
     let mut actual_lines = HashMap::new();
     for line in middle.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
@@ -113,14 +116,17 @@ macro_rules! assert_log {
 }
 
 pub fn check(
-    mut args: Arguments,
+    #[allow(unused_mut)] mut args: Arguments,
     mut tests: impl FnMut() -> Vec<Trial>,
-    num_running_tests: u64,
+    #[allow(unused_variables)] num_running_tests: u64,
     expected_conclusion: Conclusion,
     expected_output: &str,
 ) {
     // Run in single threaded mode
-    args.test_threads = Some(1);
+    #[cfg(feature = "multithreaded")]
+    {
+        args.test_threads = Some(1);
+    }
     let (c, out) = do_run(args.clone(), tests());
     let expected = crate::common::clean_expected_log(expected_output);
     let actual = {
@@ -130,17 +136,21 @@ pub fn check(
     assert_eq!(actual.trim(), expected.trim());
     assert_eq!(c, expected_conclusion);
 
-    // Run in multithreaded mode.
-    let (c, out) = do_run(args, tests());
-    assert_reordered_log(
-        &out,
-        num_running_tests,
-        &expected_output.lines().collect::<Vec<_>>(),
-        &conclusion_to_output(&c),
-    );
-    assert_eq!(c, expected_conclusion);
+    #[cfg(feature = "multithreaded")]
+    {
+        // Run in multithreaded mode.
+        let (c, out) = do_run(args, tests());
+        assert_reordered_log(
+            &out,
+            num_running_tests,
+            &expected_output.lines().collect::<Vec<_>>(),
+            &conclusion_to_output(&c),
+        );
+        assert_eq!(c, expected_conclusion);
+    }
 }
 
+#[cfg(feature = "multithreaded")]
 fn conclusion_to_output(c: &Conclusion) -> String {
     let Conclusion {
         num_filtered_out,

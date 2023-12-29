@@ -563,7 +563,11 @@ fn lots_of_flags() {
 
 #[test]
 fn terse_output() {
+    #[cfg(feature = "multithreaded")]
     let (c, out) = do_run(args(["--format", "terse", "--test-threads", "1"]), tests());
+    #[cfg(not(feature = "multithreaded"))]
+    let (c, out) = do_run(args(["--format", "terse"]), tests());
+
     assert_eq!(
         c,
         Conclusion {
@@ -612,7 +616,11 @@ fn terse_output() {
 
 #[test]
 fn json_output() {
+    #[cfg(feature = "multithreaded")]
     let (c, out) = do_run(args(["--format", "json", "--test-threads", "1"]), tests());
+    #[cfg(not(feature = "multithreaded"))]
+    let (c, out) = do_run(args(["--format", "json"]), tests());
+
     assert_eq!(
         c,
         Conclusion {

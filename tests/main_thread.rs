@@ -4,8 +4,13 @@ use libtest_mimic::{Arguments, Trial};
 fn check_test_on_main_thread() {
     let outer_thread = std::thread::current().id();
 
+    #[allow(unused_mut)]
     let mut args = Arguments::default();
-    args.test_threads = Some(1);
+
+    #[cfg(feature = "multithreaded")]
+    {
+        args.test_threads = Some(1);
+    }
     let conclusion = libtest_mimic::run(
         &args,
         vec![Trial::test("check", move || {
