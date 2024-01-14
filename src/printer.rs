@@ -11,8 +11,8 @@ use std::{fs::File, time::Duration};
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
 
 use crate::{
-    Arguments, ColorSetting, Conclusion, FormatSetting, Outcome, Trial, Failed,
-    Measurement, TestInfo,
+    Arguments, ColorSetting, Conclusion, Failed, FormatSetting, Measurement, Outcome, TestInfo,
+    Trial,
 };
 
 pub(crate) struct Printer {
@@ -92,6 +92,12 @@ impl Printer {
                 writeln!(self.out).unwrap();
                 writeln!(self.out, "running {} test{}", num_tests, plural_s).unwrap();
             }
+            FormatSetting::Json => writeln!(
+                self.out,
+                r#"{{ "type": "suite", "event": "started", "test_count": {} }}"#,
+                num_tests
+            )
+            .unwrap(),
         }
     }
 
@@ -102,7 +108,7 @@ impl Printer {
         match self.format {
             FormatSetting::Pretty => {
                 let kind = if kind.is_empty() {
-                    format!("")
+                    String::new()
                 } else {
                     format!("[{}] ", kind)
                 };
@@ -121,12 +127,20 @@ impl Printer {
                 // In terse mode, nothing is printed before the job. Only
                 // `print_single_outcome` prints one character.
             }
+            FormatSetting::Json => {
+                writeln!(
+                    self.out,
+                    r#"{{ "type": "test", "event": "started", "name": "{}" }}"#,
+                    escape8259::escape(name),
+                )
+                .unwrap();
+            }
         }
     }
 
     /// Prints the outcome of a single tests. `ok` or `FAILED` in pretty mode
     /// and `.` or `F` in terse mode.
-    pub(crate) fn print_single_outcome(&mut self, outcome: &Outcome) {
+    pub(crate) fn print_single_outcome(&mut self, info: &TestInfo, outcome: &Outcome) {
         match self.format {
             FormatSetting::Pretty => {
                 self.print_outcome_pretty(outcome);
@@ -149,6 +163,40 @@ impl Printer {
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
                 write!(self.out, "{}", c).unwrap();
                 self.out.reset().unwrap();
+            }
+            FormatSetting::Json => {
+                if let Outcome::Measured(Measurement { avg, variance }) = outcome {
+                    writeln!(
+                        self.out,
+                        r#"{{ "type": "bench", "name": "{}", "median": {}, "deviation": {} }}"#,
+                        escape8259::escape(&info.name),
+                        avg,
+                        variance,
+                    )
+                    .unwrap();
+                } else {
+                    writeln!(
+                        self.out,
+                        r#"{{ "type": "test", "name": "{}", "event": "{}"{} }}"#,
+                        escape8259::escape(&info.name),
+                        match outcome {
+                            Outcome::Passed => "ok",
+                            Outcome::Failed(_) => "failed",
+                            Outcome::Ignored => "ignored",
+                            Outcome::Measured(_) => unreachable!(),
+                        },
+                        match outcome {
+                            Outcome::Failed(Failed { msg: Some(msg) }) => {
+                                format!(
+                                    r#", "stdout": "Error: \"{}\"\n""#,
+                                    escape8259::escape(msg),
+                                )
+                            }
+                            _ => "".into(),
+                        }
+                    )
+                    .unwrap();
+                }
             }
         }
     }
@@ -179,6 +227,23 @@ impl Printer {
                 ).unwrap();
                 writeln!(self.out).unwrap();
             }
+            FormatSetting::Json => {
+                writeln!(
+                    self.out,
+                    concat!(
+                        r#"{{ "type": "suite", "event": "{}", "passed": {}, "failed": {},"#,
+                        r#" "ignored": {}, "measured": {}, "filtered_out": {}, "exec_time": {} }}"#,
+                    ),
+                    if conclusion.num_failed > 0 { "failed" } else { "ok" },
+                    conclusion.num_passed,
+                    conclusion.num_failed,
+                    conclusion.num_ignored,
+                    conclusion.num_measured,
+                    conclusion.num_filtered_out,
+                    execution_time.as_secs_f64()
+                )
+                .unwrap();
+            }
         }
     }
 
@@ -201,7 +266,7 @@ impl Printer {
             }
 
             let kind = if test.info.kind.is_empty() {
-                format!("")
+                String::new()
             } else {
                 format!("[{}] ", test.info.kind)
             };
@@ -221,6 +286,9 @@ impl Printer {
     /// Prints a list of failed tests with their messages. This is only called
     /// if there were any failures.
     pub(crate) fn print_failures(&mut self, fails: &[(TestInfo, Option<String>)]) {
+        if self.format == FormatSetting::Json {
+            return;
+        }
         writeln!(self.out).unwrap();
         writeln!(self.out, "failures:").unwrap();
         writeln!(self.out).unwrap();
