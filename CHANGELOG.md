@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.0] - 2024-01-14
+- Also check `kind` when filtering tests (thanks @sunshowers) in [#30](https://github.com/LukasKalbertodt/libtest-mimic/pull/30)
+  - This is potentially breaking as additional or fewer tests might be executed in some situations.
+- Add JSON format output (thanks @PaulWagener and @t-moe) in [#35](https://github.com/LukasKalbertodt/libtest-mimic/pull/35)
+- Add no-op flags to add CLI compatibility for IntellJ Rust (thanks @Dinnerbone and @t-moe) [#28](https://github.com/LukasKalbertodt/libtest-mimic/pull/28) / [`70cdc55`](https://github.com/LukasKalbertodt/libtest-mimic/commit/70cdc55ee50df8325d11f5e2cbe53c6bf74d375d)
+
 ## [0.6.1] - 2022-11-05
 ### Fixed
 - Actually spawn as many threads as specified by `--test-threads` (thanks @hgzimmerman) in [#32](https://github.com/LukasKalbertodt/libtest-mimic/pull/32).
@@ -101,7 +107,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.1...v0.5.2
