@@ -13,6 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: LukasKalbertodt/check-basic-style@v0.1
+      with:
+        files: '**/!(*.md|*.json)'
 
   check:
     name: 'Build & test'

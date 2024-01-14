@@ -186,8 +186,12 @@ impl Printer {
                             Outcome::Measured(_) => unreachable!(),
                         },
                         match outcome {
-                            Outcome::Failed(Failed { msg: Some(msg) }) =>
-                                format!(r#", "stdout": "Error: \"{}\"\n""#, escape8259::escape(msg)),
+                            Outcome::Failed(Failed { msg: Some(msg) }) => {
+                                format!(
+                                    r#", "stdout": "Error: \"{}\"\n""#,
+                                    escape8259::escape(msg),
+                                )
+                            }
                             _ => "".into(),
                         }
                     )
@@ -226,7 +230,10 @@ impl Printer {
             FormatSetting::Json => {
                 writeln!(
                     self.out,
-                    r#"{{ "type": "suite", "event": "{}", "passed": {}, "failed": {}, "ignored": {}, "measured": {}, "filtered_out": {}, "exec_time": {} }}"#,
+                    concat!(
+                        r#"{{ "type": "suite", "event": "{}", "passed": {}, "failed": {},"#,
+                        r#" "ignored": {}, "measured": {}, "filtered_out": {}, "exec_time": {} }}"#,
+                    ),
                     if conclusion.num_failed > 0 { "failed" } else { "ok" },
                     conclusion.num_passed,
                     conclusion.num_failed,
