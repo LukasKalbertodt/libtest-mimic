@@ -227,11 +227,16 @@ fn list_ignored() {
 #[test]
 fn list_with_filter() {
     let (c, out) = common::do_run(args(["--list", "a"]), tests());
+    // Matches all tests that contain "a" in either the name or the kind.
     assert_log!(out, "
         cat: test
+        [apple] fox: test
+        [apple] bunny: test
+        [banana] fly: test
         [banana] bear: test
         cyan: bench
         [banana] orange: bench
+        [banana] pink: bench
     ");
     assert_eq!(c, Conclusion {
         num_filtered_out: 0,
@@ -240,6 +245,71 @@ fn list_with_filter() {
         num_ignored: 0,
         num_measured: 0,
      });
+}
+
+#[test]
+fn list_with_filter_exact() {
+    // --exact matches the test name either with or without the kind.
+    let (c, out) = common::do_run(args(["--list", "--exact", "[apple] fox"]), tests());
+    assert_log!(out, "
+        [apple] fox: test
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+    });
+    let (c, out) = common::do_run(args(["--list", "--exact", "fly"]), tests());
+    assert_log!(out, "
+        [banana] fly: test
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+    });
+
+    // --skip --exact can be used to exclude tests.
+    let (c, out) = common::do_run(
+        args([
+            "--list",
+            "--exact",
+            "--skip",
+            "[apple] fox",
+            "--skip",
+            "fly",
+        ]),
+        tests(),
+    );
+    assert_log!(out, "
+        cat: test
+        dog: test
+        [apple] bunny: test
+        frog: test
+        owl: test
+        [banana] bear: test
+        red: bench
+        blue: bench
+        [kiwi] yellow: bench
+        [kiwi] green: bench
+        purple: bench
+        cyan: bench
+        [banana] orange: bench
+        [banana] pink: bench
+    ");
+    assert_eq!(c, Conclusion {
+        num_filtered_out: 0,
+        num_passed: 0,
+        num_failed: 0,
+        num_ignored: 0,
+        num_measured: 0,
+    });
+
+    // --skip --exact matches test names without the kind as well.
 }
 
 #[test]

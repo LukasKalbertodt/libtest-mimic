@@ -71,7 +71,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{process, sync::mpsc, fmt, time::Instant};
+use std::{process, sync::mpsc, fmt, time::Instant, borrow::Cow};
 
 mod args;
 mod printer;
@@ -240,6 +240,16 @@ struct TestInfo {
     is_bench: bool,
 }
 
+impl TestInfo {
+    fn test_name_with_kind(&self) -> Cow<'_, str> {
+        if self.kind.is_empty() {
+            Cow::Borrowed(&self.name)
+        } else {
+            Cow::Owned(format!("[{}] {}", self.kind, self.name))
+        }
+    }
+}
+
 /// Output of a benchmark.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Measurement {
@@ -364,13 +374,23 @@ impl Arguments {
     }
 
     fn is_filtered_out(&self, test: &Trial) -> bool {
-        let test_name = &test.info.name;
+        let test_name = test.name();
+        // Match against the full test name, including the kind. This upholds the invariant that if
+        // --list prints out:
+        //
+        // <some string>: test
+        //
+        // then "--exact <some string>" runs exactly that test.
+        let test_name_with_kind = test.info.test_name_with_kind();
 
         // If a filter was specified, apply this
         if let Some(filter) = &self.filter {
             match self.exact {
-                true if test_name != filter => return true,
-                false if !test_name.contains(filter) => return true,
+                // For exact matches, we want to match against either the test name (to maintain
+                // backwards compatibility with older versions of libtest-mimic), or the test kind
+                // (technically more correct with respect to matching against the output of --list.)
+                true if test_name != filter && &test_name_with_kind != filter => return true,
+                false if !test_name_with_kind.contains(filter) => return true,
                 _ => {}
             };
         }
@@ -378,8 +398,13 @@ impl Arguments {
         // If any skip pattern were specified, test for all patterns.
         for skip_filter in &self.skip {
             match self.exact {
-                true if test_name == skip_filter => return true,
-                false if test_name.contains(skip_filter) => return true,
+                // For exact matches, we want to match against either the test name (to maintain
+                // backwards compatibility with older versions of libtest-mimic), or the test kind
+                // (technically more correct with respect to matching against the output of --list.)
+                true if test_name == skip_filter || &test_name_with_kind == skip_filter => {
+                    return true
+                }
+                false if test_name_with_kind.contains(skip_filter) => return true,
                 _ => {}
             }
         }
