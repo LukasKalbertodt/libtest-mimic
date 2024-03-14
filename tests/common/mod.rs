@@ -52,7 +52,7 @@ pub fn clean_expected_log(s: &str) -> String {
 
 /// Best effort tool to check certain things about a log that might have all
 /// tests randomly ordered.
-pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tail: &str) {
+pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tail: &str, sloppy: bool) {
     let actual = actual.trim();
     let (first_line, rest) = actual.split_once('\n').expect("log has too few lines");
     let (middle, last_line) = rest.rsplit_once('\n').expect("log has too few lines");
@@ -63,6 +63,15 @@ pub fn assert_reordered_log(actual: &str, num: u64, expected_lines: &[&str], tai
 
     let mut actual_lines = HashMap::new();
     for line in middle.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+        // If we're testing sloppily, sort before adding the line so we can compare sorted strings.
+        // This is effectively testing if the strings are anagrams/permutations.
+        let line = if sloppy {
+            let mut line_str = line.chars().collect::<Vec<_>>();
+            line_str.sort();
+            line_str.iter().collect::<String>()
+        } else {
+            line.to_string()
+        };
         *actual_lines.entry(line).or_insert(0) += 1;
     }
 
@@ -131,6 +140,7 @@ pub fn check(
         num_running_tests,
         &expected_output.lines().collect::<Vec<_>>(),
         &conclusion_to_output(&c),
+        false,
     );
     assert_eq!(c, expected_conclusion);
 }

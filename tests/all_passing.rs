@@ -153,5 +153,5 @@ fn terse_output() {
         num_ignored: 0,
         num_measured: 0,
     });
-    assert_reordered_log(out.as_str(), 3, &["..."], &conclusion_to_output(&c));
+    assert_reordered_log(out.as_str(), 3, &["..."], &conclusion_to_output(&c), false);
 }
