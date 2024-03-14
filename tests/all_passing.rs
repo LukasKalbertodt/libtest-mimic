@@ -2,7 +2,7 @@ use common::{args, check};
 use libtest_mimic::{Trial, Conclusion};
 use pretty_assertions::assert_eq;
 
-use crate::common::do_run;
+use crate::common::{assert_reordered_log, conclusion_to_output, do_run};
 
 #[macro_use]
 mod common;
@@ -153,10 +153,5 @@ fn terse_output() {
         num_ignored: 0,
         num_measured: 0,
     });
-    assert_log!(out, "
-        running 3 tests
-        ...
-        test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; \
-            finished in 0.00s
-    ");
+    assert_reordered_log(out.as_str(), 3, &["..."], &conclusion_to_output(&c));
 }

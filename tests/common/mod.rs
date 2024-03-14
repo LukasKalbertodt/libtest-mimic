@@ -135,8 +135,14 @@ pub fn check(
     assert_eq!(c, expected_conclusion);
 }
 
-fn conclusion_to_output(c: &Conclusion) -> String {
-    let Conclusion { num_filtered_out, num_passed, num_failed, num_ignored, num_measured } = *c;
+pub fn conclusion_to_output(c: &Conclusion) -> String {
+    let Conclusion {
+        num_filtered_out,
+        num_passed,
+        num_failed,
+        num_ignored,
+        num_measured,
+    } = *c;
     format!(
         "test result: {}. {} passed; {} failed; {} ignored; {} measured; {} filtered out;",
         if num_failed > 0 { "FAILED" } else { "ok" },
