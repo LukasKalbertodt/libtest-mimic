@@ -158,6 +158,7 @@ impl Printer {
                         writeln!(self.out).unwrap();
                         return;
                     }
+                    Outcome::RuntimeIgnored => 'S',
                 };
 
                 self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -184,6 +185,7 @@ impl Printer {
                             Outcome::Failed(_) => "failed",
                             Outcome::Ignored => "ignored",
                             Outcome::Measured(_) => unreachable!(),
+                            Outcome::RuntimeIgnored => "skipped",
                         },
                         match outcome {
                             Outcome::Failed(Failed { msg: Some(msg) }) => {
@@ -317,6 +319,7 @@ impl Printer {
             Outcome::Failed { .. } => "FAILED",
             Outcome::Ignored => "ignored",
             Outcome::Measured { .. } => "bench",
+            Outcome::RuntimeIgnored => "skipped",
         };
 
         self.out.set_color(&color_of_outcome(outcome)).unwrap();
@@ -354,6 +357,7 @@ fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
         Outcome::Failed { .. } => Color::Red,
         Outcome::Ignored => Color::Yellow,
         Outcome::Measured { .. } => Color::Cyan,
+        Outcome::RuntimeIgnored => Color::Blue,
     };
     out.set_fg(Some(color));
     out
