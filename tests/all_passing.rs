@@ -13,23 +13,25 @@ fn tests() -> Vec<Trial> {
         Trial::test("foo", || Ok(())),
         Trial::test("bar", || Ok(())),
         Trial::test("barro", || Ok(())),
+        Trial::skippable_test("baz", || Ok(Some("Can't find a quux".into()))),
     ]
 }
 
 #[test]
 fn normal() {
-    check(args([]), tests, 3,
+    check(args([]), tests, 4,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 3,
             num_failed: 0,
-            num_ignored: 0,
+            num_ignored: 1,
             num_measured: 0,
         },
         "
             test foo   ... ok
             test bar   ... ok
             test barro ... ok
+            test baz   ... skipped
         "
     );
 }
@@ -38,7 +40,7 @@ fn normal() {
 fn filter_one() {
     check(args(["foo"]), tests, 1,
         Conclusion {
-            num_filtered_out: 2,
+            num_filtered_out: 3,
             num_passed: 1,
             num_failed: 0,
             num_ignored: 0,
@@ -52,7 +54,7 @@ fn filter_one() {
 fn filter_two() {
     check(args(["bar"]), tests, 2,
         Conclusion {
-            num_filtered_out: 1,
+            num_filtered_out: 2,
             num_passed: 2,
             num_failed: 0,
             num_ignored: 0,
@@ -70,7 +72,7 @@ fn filter_two() {
 fn filter_exact() {
     check(args(["bar", "--exact"]), tests, 1,
         Conclusion {
-            num_filtered_out: 2,
+            num_filtered_out: 3,
             num_passed: 1,
             num_failed: 0,
             num_ignored: 0,
@@ -84,7 +86,7 @@ fn filter_exact() {
 fn filter_two_and_skip() {
     check(args(["--skip", "barro", "bar"]), tests, 1,
         Conclusion {
-            num_filtered_out: 2,
+            num_filtered_out: 3,
             num_passed: 1,
             num_failed: 0,
             num_ignored: 0,
@@ -95,50 +97,69 @@ fn filter_two_and_skip() {
 }
 
 #[test]
+fn filter_runtime_ignored() {
+    check(args(["baz", "--exact"]), tests, 1,
+        Conclusion {
+            num_filtered_out: 3,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 1,
+            num_measured: 0,
+        },
+        "test baz ... skipped",
+    );
+}
+
+#[test]
 fn skip_nothing() {
-    check(args(["--skip", "peter"]), tests, 3,
+    check(args(["--skip", "peter"]), tests, 4,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 3,
             num_failed: 0,
-            num_ignored: 0,
+            num_ignored: 1,
             num_measured: 0,
         },
         "
             test foo   ... ok
             test bar   ... ok
             test barro ... ok
+            test baz   ... skipped
         "
     );
 }
 
 #[test]
 fn skip_two() {
-    check(args(["--skip", "bar"]), tests, 1,
+    check(args(["--skip", "bar"]), tests, 2,
         Conclusion {
             num_filtered_out: 2,
             num_passed: 1,
             num_failed: 0,
-            num_ignored: 0,
+            num_ignored: 1,
             num_measured: 0,
         },
-        "test foo ... ok"
+        "
+            test foo ... ok
+            test baz ... skipped
+        "
     );
 }
 
 #[test]
 fn skip_exact() {
-    check(args(["--exact", "--skip", "bar"]), tests, 2,
+    check(args(["--exact", "--skip", "bar"]), tests, 3,
         Conclusion {
             num_filtered_out: 1,
             num_passed: 2,
             num_failed: 0,
-            num_ignored: 0,
+            num_ignored: 1,
             num_measured: 0,
         },
         "
             test foo   ... ok
             test barro ... ok
+            test baz   ... skipped
         "
     );
 }
@@ -150,8 +171,8 @@ fn terse_output() {
         num_filtered_out: 0,
         num_passed: 3,
         num_failed: 0,
-        num_ignored: 0,
+        num_ignored: 1,
         num_measured: 0,
     });
-    assert_reordered_log(out.as_str(), 3, &["..."], &conclusion_to_output(&c), false);
+    assert_reordered_log(out.as_str(), 4, &["...S"], &conclusion_to_output(&c), true);
 }
