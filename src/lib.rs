@@ -71,7 +71,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{process, sync::mpsc, fmt, time::Instant, borrow::Cow};
+use std::{borrow::Cow, fmt, process::{self, ExitCode}, sync::mpsc, time::Instant};
 
 mod args;
 mod printer;
@@ -334,24 +334,38 @@ pub struct Conclusion {
 }
 
 impl Conclusion {
-    /// Exits the application with an appropriate error code (0 if all tests
-    /// have passed, 101 if there have been failures).
-    pub fn exit(&self) -> ! {
-        self.exit_if_failed();
-        process::exit(0);
-    }
-
-    /// Exits the application with error code 101 if there were any failures.
-    /// Otherwise, returns normally.
-    pub fn exit_if_failed(&self) {
+    /// Returns an exit code that can be returned from `main` to signal
+    /// success/failure to the calling process.
+    pub fn exit_code(&self) -> ExitCode {
         if self.has_failed() {
-            process::exit(101)
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(101)
         }
     }
 
     /// Returns whether there have been any failures.
     pub fn has_failed(&self) -> bool {
         self.num_failed > 0
+    }
+
+    /// Exits the application with an appropriate error code (0 if all tests
+    /// have passed, 101 if there have been failures). This uses
+    /// [`process::exit`], meaning that destructors are not ran. Consider
+    /// using [`Self::exit_code`] instead for a proper program cleanup.
+    pub fn exit(&self) -> ! {
+        self.exit_if_failed();
+        process::exit(0);
+    }
+
+    /// Exits the application with error code 101 if there were any failures.
+    /// Otherwise, returns normally. This uses [`process::exit`], meaning that
+    /// destructors are not ran. Consider using [`Self::exit_code`] instead for
+    /// a proper program cleanup.
+    pub fn exit_if_failed(&self) {
+        if self.has_failed() {
+            process::exit(101)
+        }
     }
 
     fn empty() -> Self {
