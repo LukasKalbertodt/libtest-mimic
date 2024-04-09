@@ -338,9 +338,9 @@ impl Conclusion {
     /// success/failure to the calling process.
     pub fn exit_code(&self) -> ExitCode {
         if self.has_failed() {
-            ExitCode::SUCCESS
-        } else {
             ExitCode::from(101)
+        } else {
+            ExitCode::SUCCESS
         }
     }
 
