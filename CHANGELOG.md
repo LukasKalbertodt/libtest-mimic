@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.1] - 2024-04-09
+- Add `Conclusion::exit_code` and note about destructors/cleanup to docs of `exit` and `exit_if_failed` [`e938e537e`](https://github.com/LukasKalbertodt/libtest-mimic/commit/e938e537e02d8cb9c9791fa63bcb8f4746dc3511)
+
+
 ## [0.7.0] - 2024-01-14
 - Also check `kind` when filtering tests (thanks @sunshowers) in [#30](https://github.com/LukasKalbertodt/libtest-mimic/pull/30)
   - This is potentially breaking as additional or fewer tests might be executed in some situations.
@@ -107,7 +111,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.5.2...v0.6.0
