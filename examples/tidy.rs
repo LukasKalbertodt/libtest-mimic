@@ -7,14 +7,14 @@ use std::{
     error::Error,
     ffi::OsStr,
     fs,
-    path::Path,
+    path::Path, process::ExitCode,
 };
 
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<ExitCode, Box<dyn Error>> {
     let args = Arguments::from_args();
     let tests = collect_tests()?;
-    libtest_mimic::run(&args, tests).exit();
+    Ok(libtest_mimic::run(&args, tests).exit_code())
 }
 
 /// Creates one test for each `.rs` file in the current directory or

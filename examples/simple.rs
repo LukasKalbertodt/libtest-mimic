@@ -1,10 +1,10 @@
 extern crate libtest_mimic;
 
-use std::{thread, time};
+use std::{process::ExitCode, thread, time};
 use libtest_mimic::{Arguments, Trial, Failed};
 
 
-fn main() {
+fn main() -> ExitCode {
     let args = Arguments::from_args();
 
     let tests = vec![
@@ -15,7 +15,7 @@ fn main() {
         Trial::test("check_katara", check_katara),
     ];
 
-    libtest_mimic::run(&args, tests).exit();
+    libtest_mimic::run(&args, tests).exit_code()
 }
 
 
