@@ -481,7 +481,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     // Execute all tests.
     let test_mode = !args.bench;
-    if args.test_threads == Some(1) {
+    if platform_defaults_to_one_thread() || args.test_threads == Some(1) {
         // Run test sequentially in main thread
         for test in tests {
             // Print `test foo    ...`, run the test, then print the outcome in
@@ -535,6 +535,13 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     printer.print_summary(&conclusion, start_instant.elapsed());
 
     conclusion
+}
+
+/// Returns whether the current host platform should use a single thread by
+/// default rather than a thread pool by default. Some platforms, such as
+/// WebAssembly, don't have native support for threading at this time.
+fn platform_defaults_to_one_thread() -> bool {
+    cfg!(target_family = "wasm")
 }
 
 /// Runs the given runner, catching any panics and treating them as a failed test.
