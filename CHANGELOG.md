@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.3] - 2024-05-10
+- Default to single-threaded tests for WebAssembly (thanks @alexcrichton) in [#41](https://github.com/LukasKalbertodt/libtest-mimic/pull/41)
+
 ## [0.7.2] - 2024-04-09
 - Fix `Conclusion::exit_code` (logic was inverted in 0.7.1)
 
@@ -114,7 +117,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.6.1...v0.7.0
