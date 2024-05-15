@@ -122,6 +122,31 @@ impl Trial {
         }
     }
 
+    /// Creates a (non-benchmark) test with the given name and runner.
+    ///
+    /// The runner returning `Ok(None)` is interpreted as the test passing. The runner returning
+    /// `Ok(Some(<String>))` is interpreted as the test being skipped for reasons determined at
+    /// runtime. The reason may be passed as a [`String`] if desired. If the runner returns
+    /// `Err(_)`, the test is considered failed.
+    pub fn skippable_test<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce() -> Result<Option<String>, Failed> + Send + 'static,
+    {
+        Self {
+            runner: Box::new(|_test_mode| match runner() {
+                Ok(None) => Outcome::Passed,
+                Ok(Some(_reason)) => Outcome::RuntimeIgnored,
+                Err(failed) => Outcome::Failed(failed),
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: false,
+            },
+        }
+    }
+
     /// Creates a benchmark with the given name and runner.
     ///
     /// If the runner's parameter `test_mode` is `true`, the runner function
@@ -303,6 +328,9 @@ enum Outcome {
     /// The test or benchmark was ignored.
     Ignored,
 
+    /// The test or benchmark was ignored.
+    RuntimeIgnored,
+
     /// The benchmark was successfully run.
     Measured(Measurement),
 }
@@ -476,6 +504,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             },
             Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
+            Outcome::RuntimeIgnored => conclusion.num_ignored += 1,
         }
     };
 
