@@ -312,7 +312,10 @@ impl Printer {
 
     pub(crate) fn print_early_exit(&mut self) {
         writeln!(self.out).unwrap();
-        writeln!(self.out, "Stopped running tests after the first failure because `--fail-first` was passed.").unwrap();
+        writeln!(
+            self.out,
+            "Stopped running tests after the first failure because `--fail-first` was passed."
+        ).unwrap();
     }
 
     /// Prints a colored 'ok'/'FAILED'/'ignored'/'bench'.
