@@ -125,6 +125,12 @@ pub struct Arguments {
     )]
     pub format: Option<FormatSetting>,
 
+    #[arg(
+        long = "fail-first",
+        help = "If set, stop running tests after the first failure",
+    )]
+    pub fail_first: bool,
+
     // ============== POSITIONAL VALUES =======================================
     /// Filter string. Only tests which contain this string are run.
     #[arg(
