@@ -544,6 +544,9 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             }
         }
 
+        // To ensure the receiver gets a close signal in the .take() below.
+        drop(sender);
+
         if interrupt.load(Ordering::SeqCst) {
             printer.print_early_exit();
         }

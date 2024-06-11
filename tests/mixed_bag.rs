@@ -753,3 +753,9 @@ fn fail_first() {
         "
     );
 }
+
+#[test]
+fn fail_first_multit() {
+    let (_, out) = do_run(args(["--fail-first", "--test-threads", "2"]), tests());
+    assert!(out.contains("Stopped running tests after the first failure"));
+}
