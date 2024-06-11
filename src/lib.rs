@@ -526,7 +526,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
                 let interrupt = interrupt.clone();
                 let args = args.clone();
                 pool.execute(move || {
-                    if interrupt.load(Ordering::Relaxed) {
+                    if interrupt.load(Ordering::SeqCst) {
                         return;
                     }
 
@@ -536,7 +536,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
                     let outcome = run_single(test.runner, test_mode);
 
                     if args.fail_first && matches!(outcome, Outcome::Failed(_)) {
-                        interrupt.store(true, Ordering::Relaxed);
+                        interrupt.store(true, Ordering::SeqCst);
                     }
 
                     let _ = sender.send((outcome, test.info));
@@ -547,11 +547,13 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
         // To ensure the receiver gets a close signal in the .take() below.
         drop(sender);
 
+        let outcomes_and_infos = receiver.iter().take(num_tests).collect::<Vec<_>>();
+
         if interrupt.load(Ordering::SeqCst) {
             printer.print_early_exit();
         }
 
-        for (outcome, test_info) in receiver.iter().take(num_tests) {
+        for (outcome, test_info) in outcomes_and_infos {
             // In multithreaded mode, we do only print the start of the line
             // after the test ran, as otherwise it would lead to terribly
             // interleaved output.
