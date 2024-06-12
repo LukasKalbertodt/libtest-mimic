@@ -5,7 +5,6 @@ use pretty_assertions::assert_eq;
 #[macro_use]
 mod common;
 
-
 fn tests() -> Vec<Trial> {
     fn meas(avg: u64, variance: u64) -> Option<Measurement> {
         Some(Measurement { avg, variance })
@@ -19,23 +18,33 @@ fn tests() -> Vec<Trial> {
         Trial::test("bunny", || Err("jumped too high".into())).with_kind("apple"),
         Trial::test("frog", || Ok(())).with_ignored_flag(true),
         Trial::test("owl", || Err("broke neck".into())).with_ignored_flag(true),
-        Trial::test("fly", || Ok(())).with_ignored_flag(true).with_kind("banana"),
-        Trial::test("bear", || Err("no honey".into())).with_ignored_flag(true).with_kind("banana"),
-
+        Trial::test("fly", || Ok(()))
+            .with_ignored_flag(true)
+            .with_kind("banana"),
+        Trial::test("bear", || Err("no honey".into()))
+            .with_ignored_flag(true)
+            .with_kind("banana"),
         Trial::bench("red", |_| Ok(meas(32, 3))),
         Trial::bench("blue", |_| Err("sky fell down".into())),
         Trial::bench("yellow", |_| Ok(meas(64, 4))).with_kind("kiwi"),
         Trial::bench("green", |_| Err("was poisoned".into())).with_kind("kiwi"),
         Trial::bench("purple", |_| Ok(meas(100, 5))).with_ignored_flag(true),
         Trial::bench("cyan", |_| Err("not creative enough".into())).with_ignored_flag(true),
-        Trial::bench("orange", |_| Ok(meas(17, 6))).with_ignored_flag(true).with_kind("banana"),
-        Trial::bench("pink", |_| Err("bad".into())).with_ignored_flag(true).with_kind("banana"),
+        Trial::bench("orange", |_| Ok(meas(17, 6)))
+            .with_ignored_flag(true)
+            .with_kind("banana"),
+        Trial::bench("pink", |_| Err("bad".into()))
+            .with_ignored_flag(true)
+            .with_kind("banana"),
     ]
 }
 
 #[test]
 fn normal() {
-    check(args([]), tests, 17,
+    check(
+        args([]),
+        tests,
+        17,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 4,
@@ -92,7 +101,10 @@ fn normal() {
 
 #[test]
 fn test_mode() {
-    check(args(["--test"]), tests, 17,
+    check(
+        args(["--test"]),
+        tests,
+        17,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 2,
@@ -141,7 +153,10 @@ fn test_mode() {
 
 #[test]
 fn bench_mode() {
-    check(args(["--bench"]), tests, 17,
+    check(
+        args(["--bench"]),
+        tests,
+        17,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 0,
@@ -187,7 +202,9 @@ fn bench_mode() {
 #[test]
 fn list() {
     let (c, out) = common::do_run(args(["--list"]), tests());
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         cat: test
         \"ups\": test
         dog: test
@@ -205,20 +222,26 @@ fn list() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
 }
 
 #[test]
 fn list_ignored() {
     let (c, out) = common::do_run(args(["--list", "--ignored"]), tests());
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         frog: test
         owl: test
         [banana] fly: test
@@ -227,21 +250,27 @@ fn list_ignored() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
 }
 
 #[test]
 fn list_with_filter() {
     let (c, out) = common::do_run(args(["--list", "a"]), tests());
     // Matches all tests that contain "a" in either the name or the kind.
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         cat: test
         [apple] fox: test
         [apple] bunny: test
@@ -250,41 +279,57 @@ fn list_with_filter() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
 }
 
 #[test]
 fn list_with_filter_exact() {
     // --exact matches the test name either with or without the kind.
     let (c, out) = common::do_run(args(["--list", "--exact", "[apple] fox"]), tests());
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         [apple] fox: test
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
     let (c, out) = common::do_run(args(["--list", "--exact", "fly"]), tests());
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         [banana] fly: test
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
 
     // --skip --exact can be used to exclude tests.
     let (c, out) = common::do_run(
@@ -298,7 +343,9 @@ fn list_with_filter_exact() {
         ]),
         tests(),
     );
-    assert_log!(out, "
+    assert_log!(
+        out,
+        "
         cat: test
         \"ups\": test
         dog: test
@@ -314,21 +361,28 @@ fn list_with_filter_exact() {
         cyan: bench
         [banana] orange: bench
         [banana] pink: bench
-    ");
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 0,
-        num_failed: 0,
-        num_ignored: 0,
-        num_measured: 0,
-    });
+    "
+    );
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 0,
+            num_failed: 0,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
 
     // --skip --exact matches test names without the kind as well.
 }
 
 #[test]
 fn filter_c() {
-    check(args(["c"]), tests, 2,
+    check(
+        args(["c"]),
+        tests,
+        2,
         Conclusion {
             num_filtered_out: 15,
             num_passed: 1,
@@ -345,7 +399,10 @@ fn filter_c() {
 
 #[test]
 fn filter_o_test() {
-    check(args(["--test", "o"]), tests, 6,
+    check(
+        args(["--test", "o"]),
+        tests,
+        6,
         Conclusion {
             num_filtered_out: 11,
             num_passed: 1,
@@ -375,7 +432,10 @@ fn filter_o_test() {
 
 #[test]
 fn filter_o_test_include_ignored() {
-    check(args(["--test", "--include-ignored", "o"]), tests, 6,
+    check(
+        args(["--test", "--include-ignored", "o"]),
+        tests,
+        6,
         Conclusion {
             num_filtered_out: 11,
             num_passed: 2,
@@ -409,7 +469,10 @@ fn filter_o_test_include_ignored() {
 
 #[test]
 fn filter_o_test_ignored() {
-    check(args(["--test", "--ignored", "o"]), tests, 3,
+    check(
+        args(["--test", "--ignored", "o"]),
+        tests,
+        3,
         Conclusion {
             num_filtered_out: 14,
             num_passed: 1,
@@ -436,7 +499,10 @@ fn filter_o_test_ignored() {
 
 #[test]
 fn normal_include_ignored() {
-    check(args(["--include-ignored"]), tests, 17,
+    check(
+        args(["--include-ignored"]),
+        tests,
+        17,
         Conclusion {
             num_filtered_out: 0,
             num_passed: 8,
@@ -509,7 +575,10 @@ fn normal_include_ignored() {
 
 #[test]
 fn normal_ignored() {
-    check(args(["--ignored"]), tests, 8,
+    check(
+        args(["--ignored"]),
+        tests,
+        8,
         Conclusion {
             num_filtered_out: 9,
             num_passed: 4,
@@ -553,7 +622,10 @@ fn normal_ignored() {
 
 #[test]
 fn lots_of_flags() {
-    check(args(["--include-ignored", "--skip", "g", "--test", "o"]), tests, 3,
+    check(
+        args(["--include-ignored", "--skip", "g", "--test", "o"]),
+        tests,
+        3,
         Conclusion {
             num_filtered_out: 14,
             num_passed: 1,
@@ -581,14 +653,19 @@ fn lots_of_flags() {
 #[test]
 fn terse_output() {
     let (c, out) = do_run(args(["--format", "terse", "--test-threads", "1"]), tests());
-    assert_eq!(c, Conclusion {
-        num_filtered_out: 0,
-        num_passed: 4,
-        num_failed: 5,
-        num_ignored: 8,
-        num_measured: 0,
-    });
-    assert_log!(out, "
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 4,
+            num_failed: 5,
+            num_ignored: 8,
+            num_measured: 0,
+        }
+    );
+    assert_log!(
+        out,
+        "
         running 17 tests
         .FF.Fiiii.F.Fiiii
         failures:
@@ -618,7 +695,8 @@ fn terse_output() {
 
         test result: FAILED. 4 passed; 5 failed; 8 ignored; 0 measured; 0 filtered out; \
             finished in 0.00s
-    ");
+    "
+    );
 }
 
 #[test]
@@ -636,4 +714,49 @@ fn json_output() {
     );
 
     assert_log!(out, include_str!("json-output.json"));
+}
+
+#[test]
+fn fail_first() {
+    let (c, out) = do_run(args(["--fail-first", "--test-threads", "1"]), tests());
+    assert_eq!(
+        c,
+        Conclusion {
+            num_filtered_out: 0,
+            num_passed: 1,
+            num_failed: 1,
+            num_ignored: 0,
+            num_measured: 0,
+        }
+    );
+
+    assert_log!(
+        out,
+        "
+        running 17 tests
+        test          cat    ... ok
+        test          \"ups\"  ... FAILED
+
+        Stopped running tests after the first failure because `--fail-first` was passed.
+
+        failures:
+
+        ---- \"ups\" ----
+        failed to parse \"abc\"
+
+
+        failures:
+            \"ups\"
+
+        test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; \
+            finished in 0.00s
+        "
+    );
+}
+
+#[test]
+fn fail_first_multit() {
+    let (_, out) = do_run(args(["--fail-first", "--test-threads", "2"]), tests());
+    println!("{}", out);
+    assert!(out.contains("Stopped running tests after the first failure"));
 }

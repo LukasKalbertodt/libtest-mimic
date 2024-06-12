@@ -71,7 +71,16 @@
 
 #![forbid(unsafe_code)]
 
-use std::{borrow::Cow, fmt, process::{self, ExitCode}, sync::mpsc, time::Instant};
+use std::{
+    borrow::Cow,
+    fmt,
+    process::{self, ExitCode},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    time::Instant,
+};
 
 mod args;
 mod printer;
@@ -80,8 +89,6 @@ use printer::Printer;
 use threadpool::ThreadPool;
 
 pub use crate::args::{Arguments, ColorSetting, FormatSetting};
-
-
 
 /// A single test or benchmark.
 ///
@@ -143,8 +150,9 @@ impl Trial {
                 Err(failed) => Outcome::Failed(failed),
                 Ok(_) if test_mode => Outcome::Passed,
                 Ok(Some(measurement)) => Outcome::Measured(measurement),
-                Ok(None)
-                    => Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into()),
+                Ok(None) => {
+                    Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into())
+                }
             }),
             info: TestInfo {
                 name: name.into(),
@@ -284,12 +292,10 @@ impl Failed {
 impl<M: std::fmt::Display> From<M> for Failed {
     fn from(msg: M) -> Self {
         Self {
-            msg: Some(msg.to_string())
+            msg: Some(msg.to_string()),
         }
     }
 }
-
-
 
 /// The outcome of performing a test/benchmark.
 #[derive(Debug, Clone)]
@@ -473,7 +479,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             Outcome::Failed(failed) => {
                 failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
-            },
+            }
             Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
         }
@@ -492,15 +498,24 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             } else {
                 run_single(test.runner, test_mode)
             };
+
+            let is_failed = matches!(outcome, Outcome::Failed(_));
+
             handle_outcome(outcome, test.info, &mut printer);
+
+            if args.fail_first && is_failed {
+                printer.print_early_exit();
+                break;
+            }
         }
     } else {
         // Run test in thread pool.
         let pool = match args.test_threads {
             Some(num_threads) => ThreadPool::new(num_threads),
-            None => ThreadPool::default()
+            None => ThreadPool::default(),
         };
         let (sender, receiver) = mpsc::channel();
+        let interrupt = Arc::new(AtomicBool::new(false));
 
         let num_tests = tests.len();
         for test in tests {
@@ -508,17 +523,37 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
                 sender.send((Outcome::Ignored, test.info)).unwrap();
             } else {
                 let sender = sender.clone();
+                let interrupt = interrupt.clone();
+                let args = args.clone();
                 pool.execute(move || {
+                    if interrupt.load(Ordering::SeqCst) {
+                        return;
+                    }
+
                     // It's fine to ignore the result of sending. If the
                     // receiver has hung up, everything will wind down soon
                     // anyway.
                     let outcome = run_single(test.runner, test_mode);
+
+                    if args.fail_first && matches!(outcome, Outcome::Failed(_)) {
+                        interrupt.store(true, Ordering::SeqCst);
+                    }
+
                     let _ = sender.send((outcome, test.info));
                 });
             }
         }
 
-        for (outcome, test_info) in receiver.iter().take(num_tests) {
+        // To ensure the receiver gets a close signal in the .take() below.
+        drop(sender);
+
+        let outcomes_and_infos = receiver.iter().take(num_tests).collect::<Vec<_>>();
+
+        if interrupt.load(Ordering::SeqCst) {
+            printer.print_early_exit();
+        }
+
+        for (outcome, test_info) in outcomes_and_infos {
             // In multithreaded mode, we do only print the start of the line
             // after the test ran, as otherwise it would lead to terribly
             // interleaved output.
@@ -552,7 +587,8 @@ fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) 
         // The `panic` information is just an `Any` object representing the
         // value the panic was invoked with. For most panics (which use
         // `panic!` like `println!`), this is either `&str` or `String`.
-        let payload = e.downcast_ref::<String>()
+        let payload = e
+            .downcast_ref::<String>()
             .map(|s| s.as_str())
             .or(e.downcast_ref::<&str>().map(|s| *s));
 

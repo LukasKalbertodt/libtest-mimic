@@ -310,6 +310,14 @@ impl Printer {
         }
     }
 
+    pub(crate) fn print_early_exit(&mut self) {
+        writeln!(self.out).unwrap();
+        writeln!(
+            self.out,
+            "Stopped running tests after the first failure because `--fail-first` was passed."
+        ).unwrap();
+    }
+
     /// Prints a colored 'ok'/'FAILED'/'ignored'/'bench'.
     fn print_outcome_pretty(&mut self, outcome: &Outcome) {
         let s = match outcome {
