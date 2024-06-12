@@ -127,7 +127,9 @@ pub struct Arguments {
 
     #[arg(
         long = "fail-first",
-        help = "If set, stop running tests after the first failure",
+        help = "If set, stop running tests after the first failure.\
+            If running tests in parallel, tests still running when \
+            the first failure occurs will still run to completion."
     )]
     pub fail_first: bool,
 
