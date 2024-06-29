@@ -6,9 +6,10 @@
 //! - `format` (and `quiet`)
 //! - `logfile`
 
-use std::{fs::File, time::Duration};
+use std::{fs::File, io::Write, time::Duration};
 
-use termcolor::{Ansi, Color, ColorChoice, ColorSpec, NoColor, StandardStream, WriteColor};
+use anstream::AutoStream;
+use anstyle::{AnsiColor, Color, Style};
 
 use crate::{
     Arguments, ColorSetting, Conclusion, Failed, FormatSetting, Measurement, Outcome, TestInfo,
@@ -16,7 +17,7 @@ use crate::{
 };
 
 pub(crate) struct Printer {
-    out: Box<dyn WriteColor>,
+    out: Box<dyn Write>,
     format: FormatSetting,
     name_width: usize,
     kind_width: usize,
@@ -29,20 +30,20 @@ impl Printer {
         let color_arg = args.color.unwrap_or(ColorSetting::Auto);
 
         // Determine target of all output
-        let out = if let Some(logfile) = &args.logfile {
+        let out: Box<dyn Write> = if let Some(logfile) = &args.logfile {
             let f = File::create(logfile).expect("failed to create logfile");
             if color_arg == ColorSetting::Always {
-                Box::new(Ansi::new(f)) as Box<dyn WriteColor>
+                Box::new(AutoStream::always(f))
             } else {
-                Box::new(NoColor::new(f))
+                Box::new(AutoStream::never(f))
             }
         } else {
             let choice = match color_arg {
-                ColorSetting::Auto => ColorChoice::Auto,
-                ColorSetting::Always => ColorChoice::Always,
-                ColorSetting::Never => ColorChoice::Never,
+                ColorSetting::Auto => anstream::ColorChoice::Auto,
+                ColorSetting::Always => anstream::ColorChoice::Always,
+                ColorSetting::Never => anstream::ColorChoice::Never,
             };
-            Box::new(StandardStream::stdout(choice))
+            Box::new(AutoStream::new(std::io::stdout(), choice))
         };
 
         // Determine correct format
@@ -160,9 +161,8 @@ impl Printer {
                     }
                 };
 
-                self.out.set_color(&color_of_outcome(outcome)).unwrap();
-                write!(self.out, "{}", c).unwrap();
-                self.out.reset().unwrap();
+                let style = color_of_outcome(outcome);
+                write!(self.out, "{style}{}{style:#}", c).unwrap();
             }
             FormatSetting::Json => {
                 if let Outcome::Measured(Measurement { avg, variance }) = outcome {
@@ -319,9 +319,8 @@ impl Printer {
             Outcome::Measured { .. } => "bench",
         };
 
-        self.out.set_color(&color_of_outcome(outcome)).unwrap();
-        write!(self.out, "{}", s).unwrap();
-        self.out.reset().unwrap();
+        let style = color_of_outcome(outcome);
+        write!(self.out, "{style}{}{style:#}", s).unwrap();
 
         if let Outcome::Measured(Measurement { avg, variance }) = outcome {
             write!(
@@ -347,14 +346,12 @@ pub fn fmt_with_thousand_sep(mut v: u64) -> String {
 }
 
 /// Returns the `ColorSpec` associated with the given outcome.
-fn color_of_outcome(outcome: &Outcome) -> ColorSpec {
-    let mut out = ColorSpec::new();
+fn color_of_outcome(outcome: &Outcome) -> Style {
     let color = match outcome {
-        Outcome::Passed => Color::Green,
-        Outcome::Failed { .. } => Color::Red,
-        Outcome::Ignored => Color::Yellow,
-        Outcome::Measured { .. } => Color::Cyan,
+        Outcome::Passed => AnsiColor::Green,
+        Outcome::Failed { .. } => AnsiColor::Red,
+        Outcome::Ignored => AnsiColor::Yellow,
+        Outcome::Measured { .. } => AnsiColor::Cyan,
     };
-    out.set_fg(Some(color));
-    out
+    Style::new().fg_color(Some(Color::Ansi(color)))
 }
