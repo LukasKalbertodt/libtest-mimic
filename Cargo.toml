@@ -3,7 +3,7 @@ name = "libtest-mimic"
 version = "0.7.3"
 authors = ["Lukas Kalbertodt <lukas.kalbertodt@gmail.com>"]
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.63"
 
 description = """
 Write your own test harness that looks and behaves like the built-in test \
@@ -20,7 +20,6 @@ exclude = [".github"]
 
 [dependencies]
 clap = { version = "4.0.8", features = ["derive"] }
-threadpool = "1.8.1"
 termcolor = "1.0.5"
 escape8259 = "0.5.2"
 

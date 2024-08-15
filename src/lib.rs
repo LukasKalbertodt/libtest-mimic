@@ -71,17 +71,21 @@
 
 #![forbid(unsafe_code)]
 
-use std::{borrow::Cow, fmt, process::{self, ExitCode}, sync::mpsc, time::Instant};
+use std::{
+    borrow::Cow,
+    fmt,
+    process::{self, ExitCode},
+    sync::mpsc,
+    time::Instant,
+};
 
 mod args;
+mod pool;
 mod printer;
 
 use printer::Printer;
-use threadpool::ThreadPool;
 
 pub use crate::args::{Arguments, ColorSetting, FormatSetting};
-
-
 
 /// A single test or benchmark.
 ///
@@ -143,8 +147,9 @@ impl Trial {
                 Err(failed) => Outcome::Failed(failed),
                 Ok(_) if test_mode => Outcome::Passed,
                 Ok(Some(measurement)) => Outcome::Measured(measurement),
-                Ok(None)
-                    => Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into()),
+                Ok(None) => {
+                    Outcome::Failed("bench runner returned `Ok(None)` in bench mode".into())
+                }
             }),
             info: TestInfo {
                 name: name.into(),
@@ -284,12 +289,10 @@ impl Failed {
 impl<M: std::fmt::Display> From<M> for Failed {
     fn from(msg: M) -> Self {
         Self {
-            msg: Some(msg.to_string())
+            msg: Some(msg.to_string()),
         }
     }
 }
-
-
 
 /// The outcome of performing a test/benchmark.
 #[derive(Debug, Clone)]
@@ -473,7 +476,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             Outcome::Failed(failed) => {
                 failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
-            },
+            }
             Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
         }
@@ -481,7 +484,14 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
 
     // Execute all tests.
     let test_mode = !args.bench;
-    if platform_defaults_to_one_thread() || args.test_threads == Some(1) {
+
+    let num_threads = platform_defaults_to_one_thread()
+        .then_some(1)
+        .or(args.test_threads)
+        .or_else(|| std::thread::available_parallelism().ok().map(Into::into))
+        .unwrap_or(1);
+
+    if num_threads == 1 {
         // Run test sequentially in main thread
         for test in tests {
             // Print `test foo    ...`, run the test, then print the outcome in
@@ -496,27 +506,28 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
         }
     } else {
         // Run test in thread pool.
-        let pool = match args.test_threads {
-            Some(num_threads) => ThreadPool::new(num_threads),
-            None => ThreadPool::default()
-        };
+        let num_tests = tests.len();
         let (sender, receiver) = mpsc::channel();
 
-        let num_tests = tests.len();
-        for test in tests {
+        let mut tasks: Vec<pool::BoxedTask> = Default::default();
+
+        for test in tests.into_iter() {
             if args.is_ignored(&test) {
                 sender.send((Outcome::Ignored, test.info)).unwrap();
             } else {
                 let sender = sender.clone();
-                pool.execute(move || {
+
+                tasks.push(Box::new(move || {
                     // It's fine to ignore the result of sending. If the
                     // receiver has hung up, everything will wind down soon
                     // anyway.
                     let outcome = run_single(test.runner, test_mode);
                     let _ = sender.send((outcome, test.info));
-                });
+                }));
             }
         }
+
+        pool::scoped_run_tasks(tasks, num_threads);
 
         for (outcome, test_info) in receiver.iter().take(num_tests) {
             // In multithreaded mode, we do only print the start of the line
@@ -552,7 +563,8 @@ fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) 
         // The `panic` information is just an `Any` object representing the
         // value the panic was invoked with. For most panics (which use
         // `panic!` like `println!`), this is either `&str` or `String`.
-        let payload = e.downcast_ref::<String>()
+        let payload = e
+            .downcast_ref::<String>()
             .map(|s| s.as_str())
             .or(e.downcast_ref::<&str>().map(|s| *s));
 
