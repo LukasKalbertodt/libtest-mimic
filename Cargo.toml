@@ -25,5 +25,5 @@ termcolor = "1.0.5"
 escape8259 = "0.5.2"
 
 [dev-dependencies]
-fastrand = "1.8.0"
+fastrand = "2.0.0"
 pretty_assertions = "1.2.1"
