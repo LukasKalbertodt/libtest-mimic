@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.8.1] - 2024-10-05
+- Fix bug when executing trial on fewer threads than trials (thanks @hanna-kruppe for catching this)
+
 ## [0.8.0] - 2024-10-05
 - **Breaking**: bump MSRV to 1.65
 - Remove `threadpool` dependency, getting rid of memory leaks observed when running under valgrind (thanks @Felix-El) in [#46](https://github.com/LukasKalbertodt/libtest-mimic/pull/46)
@@ -125,7 +128,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.1...v0.7.2
