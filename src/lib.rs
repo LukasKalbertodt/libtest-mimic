@@ -519,11 +519,14 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             // Start worker threads
             for _ in 0..num_threads {
                 scope.spawn(|| {
-                    // Get next test to process from the iterator. We have the
-                    // extra `let` binding as otherwise, the mutex would be
-                    // locked for the whole `if` body.
-                    let next_trial = iter.lock().unwrap().next();
-                    if let Some(trial) = next_trial {
+                    loop {
+                        // Get next test to process from the iterator. We have the
+                        // extra `let` binding as otherwise, the mutex would be
+                        // locked for the whole `if` body.
+                        let Some(trial) = iter.lock().unwrap().next() else {
+                            break;
+                        };
+
                         let payload = if args.is_ignored(&trial) {
                             (Outcome::Ignored, trial.info)
                         } else {
