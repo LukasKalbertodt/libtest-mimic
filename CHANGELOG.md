@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Replace dependency on threadpool crate with a custom solution built on the
+  standard library only, and only using scoped threads
+  -> fixes memory leaks observed when running under valgrind
 
 ## [0.7.3] - 2024-05-10
 - Default to single-threaded tests for WebAssembly (thanks @alexcrichton) in [#41](https://github.com/LukasKalbertodt/libtest-mimic/pull/41)
