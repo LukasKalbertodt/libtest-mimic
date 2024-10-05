@@ -520,9 +520,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             for _ in 0..num_threads {
                 scope.spawn(|| {
                     loop {
-                        // Get next test to process from the iterator. We have the
-                        // extra `let` binding as otherwise, the mutex would be
-                        // locked for the whole `if` body.
+                        // Get next test to process from the iterator.
                         let Some(trial) = iter.lock().unwrap().next() else {
                             break;
                         };
