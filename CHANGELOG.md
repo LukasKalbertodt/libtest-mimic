@@ -5,9 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Replace dependency on threadpool crate with a custom solution built on the
-  standard library only, and only using scoped threads
-  -> fixes memory leaks observed when running under valgrind
+
+## [0.8.0] - 2024-10-05
+- **Breaking**: bump MSRV to 1.65
+- Remove `threadpool` dependency, getting rid of memory leaks observed when running under valgrind (thanks @Felix-El) in [#46](https://github.com/LukasKalbertodt/libtest-mimic/pull/46)
+- Switch from `termcolor` to `anstream` to get rid of duplicate dependencies (thanks @hanna-kruppe) in [#44](https://github.com/LukasKalbertodt/libtest-mimic/pull/44)
+- Bump dev-dependency `fastrand` to `2` (thanks @alexanderkjall) in [#47](https://github.com/LukasKalbertodt/libtest-mimic/pull/47)
+- Fix outdated docs
+
 
 ## [0.7.3] - 2024-05-10
 - Default to single-threaded tests for WebAssembly (thanks @alexcrichton) in [#41](https://github.com/LukasKalbertodt/libtest-mimic/pull/41)
@@ -120,7 +125,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.0...v0.7.1
