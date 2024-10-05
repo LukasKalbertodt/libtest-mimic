@@ -65,7 +65,8 @@
 //!   `libtest` uses internal `std` functions to temporarily redirect output.
 //!   `libtest-mimic` cannot use those. See [this issue][capture] for more
 //!   information.
-//! - `--format=json|junit`
+//! - `--format=junit`
+//! - Also see [#13](https://github.com/LukasKalbertodt/libtest-mimic/issues/13)
 //!
 //! [capture]: https://github.com/LukasKalbertodt/libtest-mimic/issues/9
 
