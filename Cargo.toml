@@ -26,5 +26,5 @@ anstream = "0.6.14"
 anstyle = "1.0.7"
 
 [dev-dependencies]
-fastrand = "1.8.0"
+fastrand = "2.0.0"
 pretty_assertions = "1.2.1"
