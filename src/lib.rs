@@ -394,7 +394,9 @@ impl Arguments {
             || (!test.info.is_bench && self.bench)
     }
 
-    fn is_filtered_out(&self, test: &Trial) -> bool {
+    /// Returns `true` if the given test should be filtered out by these
+    /// arguments.
+    pub fn is_filtered_out(&self, test: &Trial) -> bool {
         let test_name = test.name();
         // Match against the full test name, including the kind. This upholds the invariant that if
         // --list prints out:
