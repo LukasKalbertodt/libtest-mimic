@@ -13,11 +13,11 @@ fn tests() -> Vec<Trial> {
         Trial::test("bar", || Ok(())),
         Trial::test("barro", || Ok(())),
         // Passed
-        Trial::skippable_test("baz", || Ok(Completion::Completed)),
+        Trial::ignorable_test("baz", || Ok(Completion::Completed)),
         // Ignored with a reason
-        Trial::skippable_test("qux", || Ok(Completion::ignored_with("very valid reason"))),
+        Trial::ignorable_test("qux", || Ok(Completion::ignored_with("very valid reason"))),
         // Ignored with no reason
-        Trial::skippable_test("quux", || Ok(Completion::ignored())),
+        Trial::ignorable_test("quux", || Ok(Completion::ignored())),
     ]
 }
 
@@ -219,7 +219,7 @@ fn terse_output() {
         out,
         "
         running 6 tests
-        ....SS
+        ....ii
         test result: ok. 4 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; \
             finished in 0.00s
     "

@@ -152,6 +152,7 @@ impl Printer {
                     Outcome::Passed => '.',
                     Outcome::Failed { .. } => 'F',
                     Outcome::Ignored => 'i',
+                    Outcome::RuntimeIgnored { .. } => 'i',
                     Outcome::Measured { .. } => {
                         // Benchmark are never printed in terse mode... for
                         // some reason.
@@ -159,7 +160,6 @@ impl Printer {
                         writeln!(self.out).unwrap();
                         return;
                     }
-                    Outcome::RuntimeIgnored { .. } => 'S',
                 };
 
                 let style = color_of_outcome(outcome);
@@ -184,8 +184,8 @@ impl Printer {
                             Outcome::Passed => "ok",
                             Outcome::Failed(_) => "failed",
                             Outcome::Ignored => "ignored",
+                            Outcome::RuntimeIgnored { .. } => "ignored",
                             Outcome::Measured(_) => unreachable!(),
-                            Outcome::RuntimeIgnored { .. } => "skipped",
                         },
                         match outcome {
                             Outcome::Failed(Failed { msg: Some(msg) }) => {

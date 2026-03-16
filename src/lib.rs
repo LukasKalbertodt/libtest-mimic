@@ -106,7 +106,7 @@ pub struct Trial {
     info: TestInfo,
 }
 
-/// A representation of whether a test ran to completion or was skipped during its runtime.
+/// A representation of whether a test ran to completion or was ignored during its runtime.
 pub enum Completion {
     /// Test completed successfully.
     Completed,
@@ -150,12 +150,13 @@ impl Trial {
         }
     }
 
-    /// Creates a (non-benchmark) test with the given name and runner.
+    /// Creates a test like [`Self::test`], but with a runner that can decide to
+    /// ignore the test.
     ///
     /// Like other tests, returning an `Err` is a test failure. The `Ok` variant for this test must
     /// return a [`Completion`] to indicate whether the test successfully ran to completion, or if
-    /// it was skipped at some point during testing. If it was skipped, a reason may be provided.
-    pub fn skippable_test<R>(name: impl Into<String>, runner: R) -> Self
+    /// it was ignored at some point during testing. If it was skipped, a reason may be provided.
+    pub fn ignorable_test<R>(name: impl Into<String>, runner: R) -> Self
     where
         R: FnOnce() -> Result<Completion, Failed> + Send + 'static,
     {
