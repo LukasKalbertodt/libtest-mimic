@@ -329,7 +329,7 @@ impl Printer {
 
         write!(self.out, "{style}{s}").unwrap();
         if let Some(reason) = r {
-            write!(self.out, ", {reason}").unwrap();
+            write!(self.out, " ({reason})").unwrap();
         }
         write!(self.out, "{style:#}").unwrap();
 
@@ -361,7 +361,7 @@ fn color_of_outcome(outcome: &Outcome) -> Style {
     let color = match outcome {
         Outcome::Passed => AnsiColor::Green,
         Outcome::Failed { .. } => AnsiColor::Red,
-        Outcome::Ignored | Outcome::RuntimeIgnored { .. }=> AnsiColor::Yellow,
+        Outcome::Ignored | Outcome::RuntimeIgnored { .. } => AnsiColor::Yellow,
         Outcome::Measured { .. } => AnsiColor::Cyan,
     };
     Style::new().fg_color(Some(Color::Ansi(color)))

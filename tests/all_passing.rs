@@ -39,7 +39,7 @@ fn normal() {
             test bar   ... ok
             test barro ... ok
             test baz   ... ok
-            test qux   ... ignored, very valid reason
+            test qux   ... ignored (very valid reason)
             test quux  ... ignored
         ",
     );
@@ -129,7 +129,7 @@ fn filter_runtime_ignored() {
             num_ignored: 1,
             num_measured: 0,
         },
-        "test qux ... ignored, very valid reason",
+        "test qux ... ignored (very valid reason)",
     );
 }
 
@@ -151,7 +151,7 @@ fn skip_nothing() {
             test bar   ... ok
             test barro ... ok
             test baz   ... ok
-            test qux   ... ignored, very valid reason
+            test qux   ... ignored (very valid reason)
             test quux  ... ignored
         ",
     );
@@ -173,7 +173,7 @@ fn skip_two() {
         "
             test foo  ... ok
             test baz  ... ok
-            test qux  ... ignored, very valid reason
+            test qux  ... ignored (very valid reason)
             test quux ... ignored
         ",
     );
@@ -196,7 +196,7 @@ fn skip_exact() {
             test foo   ... ok
             test barro ... ok
             test baz   ... ok
-            test qux   ... ignored, very valid reason
+            test qux   ... ignored (very valid reason)
             test quux  ... ignored
         ",
     );
