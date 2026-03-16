@@ -5,8 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.8.2] - 2026-03-16
+- Add `Trial::ignorable_test` to allow the runner decide at runtime whether a test should be skipped (thanks to @tgross35 in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/52))
+- Add `Arguments::{is_ignored, is_filtered_out}` (thanks to @jstarks in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/53))
 - Bump anstream to 1.0 (thanks @cwfitzgerald in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/58))
-- Add `Arguments::{is_ignored, is_filtered_out}` (thanks to @ jstarks in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/53))
 
 ## [0.8.1] - 2024-10-05
 - Fix bug when executing trial on fewer threads than trials (thanks @hanna-kruppe for catching this)
@@ -130,7 +133,8 @@ Apart from an improved API, changes that motivated the rewrite are marked with â
 - Everything.
 
 
-[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/LukasKalbertodt/libtest-mimic/compare/v0.7.2...v0.7.3
