@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 - Bump anstream to 1.0 (thanks @cwfitzgerald in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/58))
+- Add `Arguments::{is_ignored, is_filtered_out}` (thanks to @ jstarks in [#58](https://github.com/LukasKalbertodt/libtest-mimic/pull/53))
 
 ## [0.8.1] - 2024-10-05
 - Fix bug when executing trial on fewer threads than trials (thanks @hanna-kruppe for catching this)
