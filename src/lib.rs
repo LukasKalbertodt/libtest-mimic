@@ -387,14 +387,16 @@ impl Conclusion {
 }
 
 impl Arguments {
-    /// Returns `true` if the given test should be ignored.
-    fn is_ignored(&self, test: &Trial) -> bool {
+    /// Returns `true` if the given trial should be ignored by these arguments.
+    ///
+    /// Ignored tests are not run, but still listed in the outcome.
+    pub fn is_ignored(&self, test: &Trial) -> bool {
         (test.info.is_ignored && !self.ignored && !self.include_ignored)
             || (test.info.is_bench && self.test)
             || (!test.info.is_bench && self.bench)
     }
 
-    /// Returns `true` if the given test should be filtered out by these
+    /// Returns `true` if the given trial should be filtered out by these
     /// arguments.
     pub fn is_filtered_out(&self, test: &Trial) -> bool {
         let test_name = test.name();
