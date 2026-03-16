@@ -136,18 +136,7 @@ impl Trial {
     where
         R: FnOnce() -> Result<(), Failed> + Send + 'static,
     {
-        Self {
-            runner: Box::new(move |_test_mode| match runner() {
-                Ok(()) => Outcome::Passed,
-                Err(failed) => Outcome::Failed(failed),
-            }),
-            info: TestInfo {
-                name: name.into(),
-                kind: String::new(),
-                is_ignored: false,
-                is_bench: false,
-            },
-        }
+        Self::ignorable_test(name, || runner().map(|()| Completion::Completed))
     }
 
     /// Creates a test like [`Self::test`], but with a runner that can decide to
