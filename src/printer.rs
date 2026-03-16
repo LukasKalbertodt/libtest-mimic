@@ -322,9 +322,7 @@ impl Printer {
             Outcome::Ignored => "ignored",
             Outcome::Measured { .. } => "bench",
             Outcome::RuntimeIgnored { reason } => {
-                if !reason.is_empty() {
-                    r = Some(reason);
-                }
+                r = reason.as_ref();
                 "ignored"
             },
         };

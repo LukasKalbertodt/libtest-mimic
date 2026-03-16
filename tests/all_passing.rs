@@ -15,13 +15,9 @@ fn tests() -> Vec<Trial> {
         // Passed
         Trial::skippable_test("baz", || Ok(Completion::Completed)),
         // Ignored with a reason
-        Trial::skippable_test("qux", || {
-            Ok(Completion::Ignored {
-                reason: "very valid reason".into(),
-            })
-        }),
+        Trial::skippable_test("qux", || Ok(Completion::ignored_with("very valid reason"))),
         // Ignored with no reason
-        Trial::skippable_test("quux", || Ok(Completion::Ignored { reason: "".into() })),
+        Trial::skippable_test("quux", || Ok(Completion::ignored())),
     ]
 }
 

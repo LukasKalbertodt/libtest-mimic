@@ -110,8 +110,21 @@ pub struct Trial {
 pub enum Completion {
     /// Test completed successfully.
     Completed,
-    /// Test was ignored with a reason.
-    Ignored { reason: String },
+
+    /// Test was ignored.
+    Ignored { reason: Option<String> },
+}
+
+impl Completion {
+    /// Returns `Self::Ignored` without reason.
+    pub fn ignored() -> Self {
+        Self::Ignored { reason: None }
+    }
+
+    /// Returns `Self::Ignored` with the given reason.
+    pub fn ignored_with(reason: impl ToString) -> Self {
+        Self::Ignored { reason: Some(reason.to_string()) }
+    }
 }
 
 impl Trial {
@@ -343,7 +356,7 @@ enum Outcome {
     Ignored,
 
     /// The test or benchmark was ignored.
-    RuntimeIgnored { reason: String },
+    RuntimeIgnored { reason: Option<String> },
 
     /// The benchmark was successfully run.
     Measured(Measurement),
