@@ -74,9 +74,10 @@
 
 use std::{
     borrow::Cow,
+    cell::RefCell,
     fmt,
     process::{self, ExitCode},
-    sync::{mpsc, Mutex},
+    sync::{mpsc, Mutex, Once},
     thread,
     time::Instant,
 };
@@ -612,11 +613,117 @@ fn platform_defaults_to_one_thread() -> bool {
     cfg!(target_family = "wasm")
 }
 
+thread_local! {
+    static IN_TEST: RefCell<bool> = RefCell::new(false);
+    static ADDITIONAL_OUTPUT: RefCell<String> = RefCell::default();
+}
+static PANIC_HOOK_INIT: Once = Once::new();
+
+fn reset_additional_output() {
+    ADDITIONAL_OUTPUT.with_borrow_mut(|buf| {
+        buf.clear();
+    });
+}
+
+fn take_additional_output() -> String {
+    ADDITIONAL_OUTPUT.with_borrow_mut(|buf| {
+        std::mem::take(buf)
+    })
+}
+
+/// Log something that should be shown only when a test fails.
+///
+/// With the standard harness, one can use `println!()` to show additional output whenever a test
+/// fails. However, libtest-mimic cannot intercept stdout the same way, so `println!()` will be
+/// visible no matter the test result.
+///
+/// To mitigate this issue, libtest-mimic maintains its own log buffer that one can write to
+/// explicitly.
+///
+/// Use this macro in your codebase instead `println!()`:
+///
+/// ```
+/// macro_rules! trace_log {
+///     ($($tt:tt)*) => {{
+///         #[cfg(test)]
+///         libtest_mimic::log_additional_output(&format!($($tt)*));
+///         #[cfg(not(test))]
+///         println!($($tt)*);
+///     }};
+/// }
+/// ```
+pub fn log_additional_output(message: &str) {
+    ADDITIONAL_OUTPUT.with_borrow_mut(|buf| {
+        buf.push('\n');
+        buf.push_str(message);
+        if buf.len() > 20 * 1024 * 1024 {
+            buf.clear();
+            buf.push_str("\n[truncated output]");
+        }
+    });
+}
+
 /// Runs the given runner, catching any panics and treating them as a failed test.
 fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) -> Outcome {
-    use std::panic::{catch_unwind, AssertUnwindSafe};
+    use std::backtrace::BacktraceStatus;
+    use std::panic::{catch_unwind, AssertUnwindSafe, set_hook, take_hook};
 
-    catch_unwind(AssertUnwindSafe(move || runner(test_mode))).unwrap_or_else(|e| {
+    // We need to conditionally enable/disable our own panic hook after each test run. The reason
+    // is that rustc-test sets its own panic hook, and libtest_mimic's own testsuite would fail to
+    // print panics if we just set our hook and forget about it.
+    //
+    // Since the panic-hook is shared across threads, it's unwise to set/reset it as part of every
+    // test run. Instead we set the panic hook once, and check a thread local for whether the old
+    // hook should be called.
+    IN_TEST.with_borrow_mut(|in_test| *in_test = true);
+
+    PANIC_HOOK_INIT.call_once(|| {
+        let prev_hook = take_hook();
+        set_hook(Box::new(move |info| {
+            IN_TEST.with_borrow(|in_test| {
+                if !in_test {
+                    return prev_hook(info);
+                }
+            });
+            let backtrace = std::backtrace::Backtrace::capture();
+            if backtrace.status() != BacktraceStatus::Captured {
+                log_additional_output(
+                    "\npanic backtrace: did not capture, use RUST_BACKTRACE=1",
+                );
+            } else {
+                // clean up noisy frames from backtrace
+                let mut backtrace_str = String::new();
+                let mut backtrace_full_str = String::new();
+                let mut seen_begin_unwind = false;
+                for line in format!("{:#?}", backtrace).lines() {
+                    backtrace_full_str.push_str(line);
+                    backtrace_full_str.push('\n');
+                    if line.contains("\"std::panicking::try::do_call\"") {
+                        break;
+                    } else if seen_begin_unwind {
+                        backtrace_str.push_str(line);
+                        backtrace_str.push('\n');
+                    } else if line.contains("\"std::panicking::begin_panic\"") {
+                        seen_begin_unwind = true;
+                    }
+                }
+
+                if backtrace_str.is_empty() {
+                    backtrace_str = backtrace_full_str;
+                }
+
+                log_additional_output(&format!("\npanic backtrace:\n{}", backtrace_str));
+            }
+        }));
+    });
+
+    reset_additional_output();
+
+    let result = catch_unwind(AssertUnwindSafe(move || runner(test_mode)));
+
+    IN_TEST.with_borrow_mut(|in_test| *in_test = false);
+
+    result.unwrap_or_else(|e| {
         // The `panic` information is just an `Any` object representing the
         // value the panic was invoked with. For most panics (which use
         // `panic!` like `println!`), this is either `&str` or `String`.
@@ -624,10 +731,13 @@ fn run_single(runner: Box<dyn FnOnce(bool) -> Outcome + Send>, test_mode: bool) 
             .map(|s| s.as_str())
             .or(e.downcast_ref::<&str>().map(|s| *s));
 
+        let additional_output = take_additional_output();
+
         let msg = match payload {
-            Some(payload) => format!("test panicked: {payload}"),
-            None => format!("test panicked"),
+            Some(payload) => format!("test panicked: {payload}{additional_output}"),
+            None => format!("test panicked{additional_output}"),
         };
+
         Outcome::Failed(msg.into())
     })
 }

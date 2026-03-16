@@ -31,6 +31,8 @@ fn normal() {
             ---- panics ----
             test panicked: uh oh
 
+            panic backtrace: did not capture, use RUST_BACKTRACE=1
+
 
             failures:
                 panics
