@@ -159,6 +159,7 @@ impl Printer {
                         writeln!(self.out).unwrap();
                         return;
                     }
+                    Outcome::RuntimeIgnored { .. } => 'S',
                 };
 
                 let style = color_of_outcome(outcome);
@@ -184,6 +185,7 @@ impl Printer {
                             Outcome::Failed(_) => "failed",
                             Outcome::Ignored => "ignored",
                             Outcome::Measured(_) => unreachable!(),
+                            Outcome::RuntimeIgnored { .. } => "skipped",
                         },
                         match outcome {
                             Outcome::Failed(Failed { msg: Some(msg) }) => {
@@ -312,15 +314,26 @@ impl Printer {
 
     /// Prints a colored 'ok'/'FAILED'/'ignored'/'bench'.
     fn print_outcome_pretty(&mut self, outcome: &Outcome) {
+        let style = color_of_outcome(outcome);
+        let mut r = None;
         let s = match outcome {
             Outcome::Passed => "ok",
             Outcome::Failed { .. } => "FAILED",
             Outcome::Ignored => "ignored",
             Outcome::Measured { .. } => "bench",
+            Outcome::RuntimeIgnored { reason } => {
+                if !reason.is_empty() {
+                    r = Some(reason);
+                }
+                "ignored"
+            },
         };
 
-        let style = color_of_outcome(outcome);
-        write!(self.out, "{style}{}{style:#}", s).unwrap();
+        write!(self.out, "{style}{s}").unwrap();
+        if let Some(reason) = r {
+            write!(self.out, ", {reason}").unwrap();
+        }
+        write!(self.out, "{style:#}").unwrap();
 
         if let Outcome::Measured(Measurement { avg, variance }) = outcome {
             write!(
@@ -350,7 +363,7 @@ fn color_of_outcome(outcome: &Outcome) -> Style {
     let color = match outcome {
         Outcome::Passed => AnsiColor::Green,
         Outcome::Failed { .. } => AnsiColor::Red,
-        Outcome::Ignored => AnsiColor::Yellow,
+        Outcome::Ignored | Outcome::RuntimeIgnored { .. }=> AnsiColor::Yellow,
         Outcome::Measured { .. } => AnsiColor::Cyan,
     };
     Style::new().fg_color(Some(Color::Ansi(color)))

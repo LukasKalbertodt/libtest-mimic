@@ -106,6 +106,14 @@ pub struct Trial {
     info: TestInfo,
 }
 
+/// A representation of whether a test ran to completion or was skipped during its runtime.
+pub enum Completion {
+    /// Test completed successfully.
+    Completed,
+    /// Test was ignored with a reason.
+    Ignored { reason: String },
+}
+
 impl Trial {
     /// Creates a (non-benchmark) test with the given name and runner.
     ///
@@ -119,6 +127,30 @@ impl Trial {
             runner: Box::new(move |_test_mode| match runner() {
                 Ok(()) => Outcome::Passed,
                 Err(failed) => Outcome::Failed(failed),
+            }),
+            info: TestInfo {
+                name: name.into(),
+                kind: String::new(),
+                is_ignored: false,
+                is_bench: false,
+            },
+        }
+    }
+
+    /// Creates a (non-benchmark) test with the given name and runner.
+    ///
+    /// Like other tests, returning an `Err` is a test failure. The `Ok` variant for this test must
+    /// return a [`Completion`] to indicate whether the test successfully ran to completion, or if
+    /// it was skipped at some point during testing. If it was skipped, a reason may be provided.
+    pub fn skippable_test<R>(name: impl Into<String>, runner: R) -> Self
+    where
+        R: FnOnce() -> Result<Completion, Failed> + Send + 'static,
+    {
+        Self {
+            runner: Box::new(|_test_mode| match runner() {
+                Ok(Completion::Completed) => Outcome::Passed,
+                Ok(Completion::Ignored { reason }) => Outcome::RuntimeIgnored { reason },
+                Err(e) => Outcome::Failed(e),
             }),
             info: TestInfo {
                 name: name.into(),
@@ -310,6 +342,9 @@ enum Outcome {
     /// The test or benchmark was ignored.
     Ignored,
 
+    /// The test or benchmark was ignored.
+    RuntimeIgnored { reason: String },
+
     /// The benchmark was successfully run.
     Measured(Measurement),
 }
@@ -484,9 +519,10 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
             Outcome::Failed(failed) => {
                 failed_tests.push((test, failed.msg));
                 conclusion.num_failed += 1;
-            },
+            }
             Outcome::Ignored => conclusion.num_ignored += 1,
             Outcome::Measured(_) => conclusion.num_measured += 1,
+            Outcome::RuntimeIgnored { .. } => conclusion.num_ignored += 1,
         }
     };
 
