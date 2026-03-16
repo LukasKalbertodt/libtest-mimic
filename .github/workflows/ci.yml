@@ -9,18 +9,18 @@ env:
 jobs:
   style:
     name: Check basic style
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - uses: LukasKalbertodt/check-basic-style@v0.1
       with:
         files: '**/!(*.md|*.json)'
 
   check:
     name: 'Build & test'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - run: cargo build
     - run: cargo test
     - run: cargo doc
