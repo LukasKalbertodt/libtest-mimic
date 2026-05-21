@@ -447,15 +447,25 @@ impl Arguments {
         let test_name_with_kind = test.info.test_name_with_kind();
 
         // If a filter was specified, apply this
-        if let Some(filter) = &self.filter {
-            match self.exact {
-                // For exact matches, we want to match against either the test name (to maintain
-                // backwards compatibility with older versions of libtest-mimic), or the test kind
-                // (technically more correct with respect to matching against the output of --list.)
-                true if test_name != filter && &test_name_with_kind != filter => return true,
-                false if !test_name_with_kind.contains(filter) => return true,
-                _ => {}
-            };
+        if self.exact {
+            // For exact matches, we want to match against either the test name (to maintain
+            // backwards compatibility with older versions of libtest-mimic), or the test kind
+            // (technically more correct with respect to matching against the output of --list.)
+            let match_any = self
+                .filters
+                .iter()
+                .any(|filter| test_name == filter || &test_name_with_kind == filter);
+            if !match_any {
+                return true;
+            }
+        } else {
+            let match_any = self
+                .filters
+                .iter()
+                .any(|filter| test_name_with_kind.contains(filter));
+            if !match_any {
+                return true;
+            }
         }
 
         // If any skip pattern were specified, test for all patterns.
@@ -493,7 +503,7 @@ pub fn run(args: &Arguments, mut tests: Vec<Trial>) -> Conclusion {
     let mut conclusion = Conclusion::empty();
 
     // Apply filtering
-    if args.filter.is_some() || !args.skip.is_empty() || args.ignored {
+    if !args.filters.is_empty() || !args.skip.is_empty() || args.ignored {
         let len_before = tests.len() as u64;
         tests.retain(|test| !args.is_filtered_out(test));
         conclusion.num_filtered_out = len_before - tests.len() as u64;
