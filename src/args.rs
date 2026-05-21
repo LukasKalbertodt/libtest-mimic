@@ -11,7 +11,7 @@ use clap::{Parser, ValueEnum};
 /// the main use cases should work exactly like with the built-in harness.
 #[derive(Parser, Debug, Clone, Default)]
 #[command(
-    help_template = "USAGE: [OPTIONS] [FILTER]\n\n{all-args}\n\n\n{after-help}",
+    help_template = "USAGE: [OPTIONS] [FILTER]...\n\n{all-args}\n\n\n{after-help}",
     disable_version_flag = true,
     after_help = "By default, all tests are run in parallel. This can be altered with the \n\
         --test-threads flag when running tests (set it to 1).",
@@ -132,7 +132,7 @@ pub struct Arguments {
         help = "The FILTER string is tested against the name of all tests, and only those tests \
                 whose names contain the filter are run.",
     )]
-    pub filter: Option<String>,
+    pub filters: Vec<String>,
 }
 
 impl Arguments {
