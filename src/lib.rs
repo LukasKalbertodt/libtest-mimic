@@ -107,6 +107,7 @@ pub struct Trial {
 }
 
 /// A representation of whether a test ran to completion or was ignored during its runtime.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Completion {
     /// Test completed successfully.
     Completed,
